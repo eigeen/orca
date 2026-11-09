@@ -12103,6 +12103,8 @@
           "unavailable": "Unavailable",
           "pathGroup": "How the phone reaches this computer",
           "anywhereTitle": "Orca Relay",
+          "selfHostedTitle": "Self-hosted Relay",
+          "selfHostedInvalid": "Check the Relay URL and token file configuration.",
           "anywhereDescription": "Phone can be on cellular or any Wi‑Fi. Sign-in required for Relay only.",
           "relayUnavailable": "Orca Relay isn’t available in this build. Use LAN.",
           "signIn": "Sign in for Relay",

@@ -11625,6 +11625,8 @@
           "unavailable": "不可用",
           "pathGroup": "手機存取此電腦的方式",
           "anywhereTitle": "Orca Relay",
+          "selfHostedTitle": "自架 Relay",
+          "selfHostedInvalid": "請檢查 Relay 位址和憑證檔案設定。",
           "anywhereDescription": "手機可透過行動網路或任意 Wi‑Fi 連線。僅 Relay 需要登入。",
           "relayUnavailable": "此版本不支援 Orca Relay。請使用區域網路。",
           "signIn": "登入以使用 Relay",

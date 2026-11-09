@@ -5,7 +5,7 @@ import {
 } from './assignment/assignment-inventory-snapshot.js'
 import { readRegionCorrectionOutcomes } from './assignment/regional-rehome/region-correction-outcomes.js'
 import { RelayAssignmentStore } from './assignment/assignment-store.js'
-import { loadRelayConfig } from './config.js'
+import { loadRelayBootConfig } from './authentication/self-hosted-auth.js'
 import { startCellHeartbeat } from './cell/cell-heartbeat-client.js'
 import {
   CELL_FLAG_DEFAULTS,
@@ -46,7 +46,7 @@ let cellFlagsApplied: (() => CellFlags) | null = null
 process.on('unhandledRejection', (reason) =>
   handleRelayUnhandledRejection(reason, cellFlagsApplied?.().rejectionFence ?? true)
 )
-const config = loadRelayConfig()
+const { config, bindHost, registerSelfHostedAuth } = await loadRelayBootConfig()
 const database = await openRelayDatabaseAtBoot({
   databaseUrl: config.databaseUrl,
   dataDir: config.dataDir,
@@ -79,7 +79,10 @@ const {
   ready,
   cellIncarnation,
   shadowSeatPoller
-} = createRelayServer(config, database, { cellFlags: cellFlagChannel?.applied })
+} = createRelayServer(config, database, {
+  cellFlags: cellFlagChannel?.applied,
+  registerSelfHostedAuth
+})
 // Cloud Run sets K_SERVICE; GCE cells and local runs skip the metadata read.
 if (process.env.K_SERVICE) {
   void readCloudRunInstanceZone().then((zone) => observability.setInstanceZone(zone))
@@ -186,7 +189,7 @@ server.on('connection', (socket: Socket) => {
   openSockets.add(socket)
   socket.once('close', () => openSockets.delete(socket))
 })
-server.listen(config.port, () => {
+server.listen({ port: config.port, host: bindHost }, () => {
   console.log(`[orca-relay] listening on ${config.publicUrl} (port ${config.port})`)
 })
 

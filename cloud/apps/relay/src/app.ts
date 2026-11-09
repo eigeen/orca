@@ -102,6 +102,7 @@ export function createRelayApp(
   config: RelayConfig,
   operations: {
     store: RelayCredentialStore
+    registerSelfHostedAuth?: (app: Hono) => void
     assignments: RelayAssignmentStore
     drain: (graceMs: number, options?: { paceWindowMs?: number }) => void
     idleRehome?: (input: IdleRegionalRehomeRequest & {
@@ -336,7 +337,9 @@ export function createRelayApp(
   app.use('*', (context, next) =>
     CELL_RESERVE_ROUTE_PATHS.has(context.req.path) ? next() : limitBody(context, next)
   )
+  operations.registerSelfHostedAuth?.(app)
   app.use('/v1/admin/*', async (context, next) => {
+    if (operations.registerSelfHostedAuth) return context.notFound()
     if (
       context.req.path === '/v1/admin/cell-heartbeat' ||
       context.req.path === '/v1/admin/cell-rehome-status' ||

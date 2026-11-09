@@ -11189,6 +11189,8 @@
           "localDescription": "手机必须连接此 Wi‑Fi 或通过 Tailscale。无需账号。",
           "pathGroup": "手机访问此电脑的方式",
           "anywhereTitle": "Orca Relay",
+          "selfHostedTitle": "自建 Relay",
+          "selfHostedInvalid": "请检查 Relay 地址和凭据文件配置。",
           "anywhereDescription": "手机可通过蜂窝网络或任意 Wi‑Fi 连接。仅 Relay 需要登录。",
           "relayUnavailable": "此版本不支持 Orca Relay。请使用局域网。",
           "signInAgain": "重新登录以使用 Relay",

@@ -12,6 +12,7 @@ import type { MobilePairingConnectionMode } from '../../../../../../shared/remot
 import { MobilePairingPathOption } from './MobilePairingPathOption'
 import { MobileRelaySignInPanel } from './MobileRelaySignInPanel'
 import { relayClockSkewMessage } from '../../../mobile/relay-clock-skew-message'
+import { selectMobileRelayAuthorized } from '../../../mobile/use-mobile-pairing-connection-mode'
 
 function relayStatusLabel(status: MobileRelayStatus): string {
   if (status === 'registered') {
@@ -66,11 +67,13 @@ export function MobilePairingConnectionOptions({
 }): React.JSX.Element {
   const authStatus = useAppStore((state) => state.orcaProfileAuthStatus)
   const [relayStatus, setRelayStatus] = useState<MobileRelayStatusDetail>({ status: 'offline' })
-  const signedIn = authStatus?.state === 'connected'
+  const signedIn = useAppStore(selectMobileRelayAuthorized)
+  const selfHostedOrigin = authStatus?.selfHostedRelayOrigin
+  const selfHosted = selfHostedOrigin !== undefined
   const reconnectRequired = authStatus?.state === 'reconnect-required'
   // Unconfigured builds have no Relay sign-in endpoint; mark unavailable instead of offering a dead CTA.
-  const configured = authStatus?.configured !== false
-  const needsSignIn = value === 'automatic' && !signedIn && configured
+  const configured = selfHosted ? selfHostedOrigin !== null : authStatus?.configured !== false
+  const needsSignIn = value === 'automatic' && !selfHosted && !signedIn && configured
   // Availability is a property of the build, not of the current selection.
   const relayUnavailable = !signedIn && !configured
   const relayDisabled = relayMintRetrying || relayUnavailable
@@ -149,20 +152,33 @@ export function MobilePairingConnectionOptions({
             optionRefs.current.automatic = el
           }}
           onSelect={() => onChange('automatic')}
-          title={translate(
-            'auto.components.settings.MobilePairingConnectionOptions.anywhereTitle',
-            'Orca Relay'
-          )}
-          description={
-            relayUnavailable
+          title={
+            selfHosted
               ? translate(
-                  'auto.components.settings.MobilePairingConnectionOptions.relayUnavailable',
-                  'Orca Relay isn’t available in this build. Use LAN.'
+                  'auto.components.settings.MobilePairingConnectionOptions.selfHostedTitle',
+                  'Self-hosted Relay'
                 )
               : translate(
-                  'auto.components.settings.MobilePairingConnectionOptions.anywhereDescription',
-                  'Phone can be on cellular or any Wi‑Fi. Sign-in required for Relay only.'
+                  'auto.components.settings.MobilePairingConnectionOptions.anywhereTitle',
+                  'Orca Relay'
                 )
+          }
+          description={
+            selfHosted
+              ? (selfHostedOrigin ??
+                translate(
+                  'auto.components.settings.MobilePairingConnectionOptions.selfHostedInvalid',
+                  'Check the Relay URL and token file configuration.'
+                ))
+              : relayUnavailable
+                ? translate(
+                    'auto.components.settings.MobilePairingConnectionOptions.relayUnavailable',
+                    'Orca Relay isn’t available in this build. Use LAN.'
+                  )
+                : translate(
+                    'auto.components.settings.MobilePairingConnectionOptions.anywhereDescription',
+                    'Phone can be on cellular or any Wi‑Fi. Sign-in required for Relay only.'
+                  )
           }
           trailing={
             relayUnavailable ? (
@@ -198,7 +214,7 @@ export function MobilePairingConnectionOptions({
             {relayClockSkewMessage(relayStatus.clockOffsetMs)}
           </p>
         ) : null}
-        {value === 'automatic' && relayCell ? (
+        {value === 'automatic' && relayCell && !selfHosted ? (
           <p
             className="border-t border-border/60 py-2 pl-10 pr-3 text-xs text-muted-foreground"
             data-testid="relay-cell-line"

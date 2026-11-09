@@ -24,9 +24,10 @@ import { pairingAuthorizationForContext } from './relay-pairing-authorization'
 import { deriveRelayHostId } from './relay-http-client'
 import { RelayDemandLedger } from './relay-demand-ledger'
 import { createRelayRegionPreferenceReader } from './relay-region-preference-reader'
+import { readSelfHostedRelayAuth, type SelfHostedRelayConfig } from './self-hosted-relay-config'
 
 type DesktopRelayServiceOptions = {
-  authConfig: OrcaCloudAuthConfig
+  authConfig: OrcaCloudAuthConfig | SelfHostedRelayConfig
   userDataPath: string
   appVersion: string
   runtimeRpc: OrcaRuntimeRpcServer
@@ -61,13 +62,19 @@ export class DesktopRelayService {
       revokeOutbox: this.revokeOutbox,
       relayHostId: deriveRelayHostId(keypair.publicKey)
     })
-    const regionPreference = createRelayRegionPreferenceReader(options)
+    const { authConfig } = options
+    const selfHosted = 'tokenFile' in authConfig
+    const regionPreference = selfHosted ? null : createRelayRegionPreferenceReader(options)
     this.coordinator = new RelayAuthCoordinator({
-      readContext: () => readRelayAuthContext(options.authConfig, options.userDataPath),
+      readContext: () =>
+        selfHosted
+          ? readSelfHostedRelayAuth(authConfig)
+          : readRelayAuthContext(authConfig, options.userDataPath),
       hasDemand: ({ identity }) => this.demandLedger.hasDemand(relayIdentityKey(identity)),
       openBroker: async ({ context, isCurrent, refreshAccessToken }) => {
         const broker = await RelaySessionBroker.connect({
-          authConfig: options.authConfig,
+          authConfig,
+          expectedCellOrigin: selfHosted ? authConfig.relayDirectorUrl : undefined,
           accessToken: context.accessToken,
           identity: context.identity,
           keypair,
@@ -75,9 +82,9 @@ export class DesktopRelayService {
           mobileSocketWiring,
           isCurrent,
           refreshAccessToken,
-          resolvePreferredRegion: regionPreference.resolvePreferredRegion,
-          measureRegionDecision: regionPreference.measureRegionDecision,
-          onAssignedCellActive: regionPreference.noteAssignedCell,
+          resolvePreferredRegion: regionPreference?.resolvePreferredRegion,
+          measureRegionDecision: regionPreference?.measureRegionDecision,
+          onAssignedCellActive: regionPreference?.noteAssignedCell,
           onStatus: options.onStatus
         })
         void this.flushRevokeOutbox(broker)

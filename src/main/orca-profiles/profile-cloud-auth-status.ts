@@ -2,6 +2,7 @@ import type { OrcaProfileAuthStatus } from '../../shared/orca-profiles'
 import type { ActiveOrcaProfileState } from './profile-index-store'
 import { getOrcaCloudAuthConfig, isOrcaCloudDevAuthEnabled } from './profile-cloud-auth-config'
 import { readCloudSession } from './profile-cloud-session-owner'
+import { getSelfHostedRelayConfig } from '../runtime/mobile-cloud-relay/self-hosted-relay-config'
 
 export function getOrcaProfileAuthStatusFromProfile(
   active: ActiveOrcaProfileState,
@@ -10,9 +11,13 @@ export function getOrcaProfileAuthStatusFromProfile(
   const configState = getOrcaCloudAuthConfig()
   const devAuthEnabled = isOrcaCloudDevAuthEnabled()
   const configured = configState.configured || devAuthEnabled
+  const selfHosted = getSelfHostedRelayConfig()
+  const relay =
+    selfHosted === undefined ? {} : { selfHostedRelayOrigin: selfHosted?.relayDirectorUrl ?? null }
   const cloud = active.profile.cloud
   if (!cloud) {
     return {
+      ...relay,
       activeProfileId: active.profile.id,
       configured,
       state: configured ? 'local' : 'unconfigured',
@@ -24,6 +29,7 @@ export function getOrcaProfileAuthStatusFromProfile(
   const session = readCloudSession(active.profile.id, userDataPath)
   if (!configured) {
     return {
+      ...relay,
       activeProfileId: active.profile.id,
       configured: false,
       state: 'unconfigured',
@@ -38,6 +44,7 @@ export function getOrcaProfileAuthStatusFromProfile(
   }
   if (session.status === 'found') {
     return {
+      ...relay,
       activeProfileId: active.profile.id,
       configured,
       state: 'connected',
@@ -49,6 +56,7 @@ export function getOrcaProfileAuthStatusFromProfile(
   }
 
   return {
+    ...relay,
     activeProfileId: active.profile.id,
     configured,
     state: 'reconnect-required',

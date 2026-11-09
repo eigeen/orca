@@ -54,6 +54,8 @@ export type OrcaProfileAuthStatus = {
   capabilities?: OrcaCloudCapabilities
   credentialError?: string
   setupMessage?: string
+  /** Absent for official Relay. Null if the explicit self-hosted configuration is invalid. */
+  selfHostedRelayOrigin?: string | null
 }
 
 export type OrcaProfileSummary = {

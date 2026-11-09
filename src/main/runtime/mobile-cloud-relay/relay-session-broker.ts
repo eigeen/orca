@@ -21,7 +21,6 @@ import { RelayRegionRefresh } from './relay-region-refresh'
 import { relayRenewalDelayMs } from './relay-renewal-jitter'
 
 export class RelaySessionBroker {
-  private readonly options: RelaySessionBrokerOptions
   private readonly relayHostId: string
   private readonly originPool: RelayOriginPool
   private readonly regionRefresh: RelayRegionRefresh | null
@@ -29,11 +28,11 @@ export class RelaySessionBroker {
   private refreshTimer: ReturnType<typeof setTimeout> | null = null
   private closed = false
 
-  private constructor(options: RelaySessionBrokerOptions) {
-    this.options = options
+  private constructor(private readonly options: RelaySessionBrokerOptions) {
     this.relayHostId = deriveRelayHostId(options.keypair.publicKey)
     this.originPool = new RelayOriginPool({
       directorUrl: options.authConfig.relayDirectorUrl,
+      expectedCellOrigin: options.expectedCellOrigin,
       relayHostId: this.relayHostId,
       identity: options.identity,
       keypair: options.keypair,
@@ -215,6 +214,7 @@ export class RelaySessionBroker {
     const [authorization, preferredRegion] = await Promise.all([
       exchangeRelayAuthorization({
         endpoint: this.options.authConfig.relayTokenEndpoint,
+        rejectRedirect: this.options.expectedCellOrigin !== undefined,
         accessToken,
         keypair: this.options.keypair,
         fetch: this.options.fetch
@@ -224,6 +224,7 @@ export class RelaySessionBroker {
     this.assertCurrent()
     const assignment = await requestRelayAssignment({
       directorUrl: this.options.authConfig.relayDirectorUrl,
+      expectedCellOrigin: this.options.expectedCellOrigin,
       relayToken: authorization.relayToken,
       relayHostId: this.relayHostId,
       // Director verifies durable-assignment claims; first-ever pairing falls through to placement.
@@ -273,6 +274,7 @@ export class RelaySessionBroker {
       }
       const authorization = await exchangeRelayAuthorization({
         endpoint: this.options.authConfig.relayTokenEndpoint,
+        rejectRedirect: this.options.expectedCellOrigin !== undefined,
         accessToken: refresh.accessToken,
         keypair: this.options.keypair,
         fetch: this.options.fetch

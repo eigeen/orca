@@ -7,6 +7,7 @@ import type { RelayRegion } from './relay-region-probe'
 
 export type RelayOriginPoolOptions = {
   directorUrl: string
+  expectedCellOrigin?: string
   relayHostId: string
   identity: RelayIdentity
   keypair: E2EEKeypair
