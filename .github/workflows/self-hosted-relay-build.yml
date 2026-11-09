@@ -92,7 +92,13 @@ jobs:
         run: |
           node config/scripts/native-build/node-addons/ensure-native-runtime.mjs --runtime=electron
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $version = node -p "require('./package.json').version"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # The desktop updater recognizes this version as a locally maintained Windows build.
+          $env:ORCA_LOCAL_BUILD_VERSION = "${version}-local.$env:GITHUB_RUN_NUMBER"
           pnpm exec electron-builder --config config/electron-builder.config.cjs --win --publish never
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node -e "const { version } = JSON.parse(require('@electron/asar').extractFile('dist/win-unpacked/resources/app.asar', 'package.json')); if (version !== process.env.ORCA_LOCAL_BUILD_VERSION) throw new Error('Unexpected packaged version: ' + version)"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v7
         with:

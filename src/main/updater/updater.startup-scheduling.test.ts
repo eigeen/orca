@@ -51,6 +51,25 @@ describe('updater', () => {
     expect(powerMonitorOnMock).not.toHaveBeenCalled()
   })
 
+  it('does not check for official updates in a packaged local Windows build', async () => {
+    const platform = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
+    try {
+      appMock.getVersion.mockReturnValue('1.4.214-local.2')
+      const { setupAutoUpdater, checkForUpdatesFromMenu } = await loadUpdaterModule()
+
+      setupAutoUpdater(updaterMainWindow(vi.fn()))
+      appMock.emit('browser-window-focus')
+      checkForUpdatesFromMenu()
+      await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1000)
+
+      expect(autoUpdaterMock.setFeedURL).not.toHaveBeenCalled()
+      expect(autoUpdaterMock.checkForUpdates).not.toHaveBeenCalled()
+      expect(powerMonitorOnMock).not.toHaveBeenCalled()
+    } finally {
+      platform.mockRestore()
+    }
+  })
+
   it('waits until the remaining interval before the next background check', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-04-03T12:00:00Z'))
