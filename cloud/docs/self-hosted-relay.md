@@ -41,11 +41,11 @@ relay.example.com {
 ## 连接桌面和 Android
 
 1. 通过安全通道把 `host-token.txt` 复制到桌面。它可以注册桌面，按账户凭据保管。签名私钥和分配密钥只留在服务器。
-2. 启动桌面 Orca 时设置 `ORCA_SELF_HOSTED_RELAY_URL` 和 `ORCA_SELF_HOSTED_RELAY_TOKEN_FILE`。Windows 可在 PowerShell 设置这两个环境变量，再从该进程启动新版 `Orca.exe`。如果 Orca 已在运行，先退出托盘中的进程。
+2. 在桌面打开 **设置 → 手机 → 自建 Relay**，填写 HTTPS 地址，点击 **选择凭据并保存** 并选择 `host-token.txt`，然后重启 Orca。设置保存服务器地址和本机凭据文件路径。
 3. 在桌面打开 **设置 → 手机 → 自建 Relay**，确认显示的域名，生成二维码。在 Android 扫码或粘贴配对码。更换 Relay 地址时，请重新配对。
 4. Android 默认按每个配对码配置地址。需要把自用 Android 构建锁定到一个 Relay 时，在运行 Expo 构建之前设置 `EXPO_PUBLIC_ORCA_RELAY_ORIGIN=https://relay.example.com`。这个变量只包含公开地址。局域网直连仍可独立使用。
 
-自建模式不需要 Orca Cloud 登录，桌面也不会启动官方推送网关客户端。Android 在前台可通过 Relay 使用实时连接。系统后台推送需要独立的推送网关与 FCM 配置。移除桌面的自建配置并重启可切回官方 Relay。
+自建模式不需要 Orca Cloud 登录，桌面也不会启动官方推送网关客户端。Android 在前台可通过 Relay 使用实时连接。系统后台推送需要独立的推送网关与 FCM 配置。点击 **使用官方 Relay** 并重启可切回官方 Relay。没有保存界面设置时，桌面仍读取 `ORCA_SELF_HOSTED_RELAY_URL` 和 `ORCA_SELF_HOSTED_RELAY_TOKEN_FILE`。
 
 ## 在 GitHub Actions 构建
 

@@ -2,7 +2,7 @@ import type { OrcaProfileAuthStatus } from '../../shared/orca-profiles'
 import type { ActiveOrcaProfileState } from './profile-index-store'
 import { getOrcaCloudAuthConfig, isOrcaCloudDevAuthEnabled } from './profile-cloud-auth-config'
 import { readCloudSession } from './profile-cloud-session-owner'
-import { getSelfHostedRelayConfig } from '../runtime/mobile-cloud-relay/self-hosted-relay-config'
+import { getActiveSelfHostedRelayConfig } from '../runtime/mobile-cloud-relay/self-hosted-relay-preferences'
 
 export function getOrcaProfileAuthStatusFromProfile(
   active: ActiveOrcaProfileState,
@@ -11,7 +11,7 @@ export function getOrcaProfileAuthStatusFromProfile(
   const configState = getOrcaCloudAuthConfig()
   const devAuthEnabled = isOrcaCloudDevAuthEnabled()
   const configured = configState.configured || devAuthEnabled
-  const selfHosted = getSelfHostedRelayConfig()
+  const selfHosted = getActiveSelfHostedRelayConfig(userDataPath)
   const relay =
     selfHosted === undefined ? {} : { selfHostedRelayOrigin: selfHosted?.relayDirectorUrl ?? null }
   const cloud = active.profile.cloud

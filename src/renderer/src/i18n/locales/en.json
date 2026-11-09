@@ -529,6 +529,17 @@
     "refreshingDetails": "Refreshing check details…"
   },
   "settings": {
+    "selfHostedRelay": {
+      "title": "Self-hosted Relay",
+      "address": "Relay HTTPS address",
+      "chooseAndSave": "Choose credential and save",
+      "useOfficial": "Use Orca Relay",
+      "restartRequired": "Restart Orca to apply Relay settings.",
+      "invalidOrigin": "Enter an HTTPS server address.",
+      "invalidCredential": "Select a valid Relay host token file.",
+      "saveFailed": "Could not save Relay settings. Try again.",
+      "restartFailed": "Could not restart Orca. Quit and reopen it to apply the setting."
+    },
     "chat": {
       "launch": {
         "on": "Chat UI is on",

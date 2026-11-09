@@ -31,6 +31,17 @@
     "refreshingDetails": "正在刷新检查详情…"
   },
   "settings": {
+    "selfHostedRelay": {
+      "title": "自建 Relay",
+      "address": "Relay HTTPS 地址",
+      "chooseAndSave": "选择凭据并保存",
+      "useOfficial": "使用官方 Relay",
+      "restartRequired": "重启 Orca 以应用 Relay 设置。",
+      "invalidOrigin": "请输入 HTTPS 服务器地址。",
+      "invalidCredential": "请选择有效的 Relay 主机凭据文件。",
+      "saveFailed": "无法保存 Relay 设置，请重试。",
+      "restartFailed": "无法重启 Orca。请退出并重新打开以应用设置。"
+    },
     "chat": {
       "permissionsAgentsLink": "设置 → 智能体",
       "permissionsTitle": "新聊天的权限",

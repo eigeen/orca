@@ -462,6 +462,17 @@
     "refreshingDetails": "正在重新整理檢查詳情…"
   },
   "settings": {
+    "selfHostedRelay": {
+      "title": "自架 Relay",
+      "address": "Relay HTTPS 位址",
+      "chooseAndSave": "選擇憑證並儲存",
+      "useOfficial": "使用官方 Relay",
+      "restartRequired": "重新啟動 Orca 以套用 Relay 設定。",
+      "invalidOrigin": "請輸入 HTTPS 伺服器位址。",
+      "invalidCredential": "請選擇有效的 Relay 主機憑證檔案。",
+      "saveFailed": "無法儲存 Relay 設定，請重試。",
+      "restartFailed": "無法重新啟動 Orca。請結束後重新開啟以套用設定。"
+    },
     "chat": {
       "permissionsAgentsLink": "設定 → 代理程式",
       "permissionsTitle": "新聊天的權限",

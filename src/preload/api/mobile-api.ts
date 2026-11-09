@@ -3,6 +3,10 @@ import type { MobilePairingConnectionMode } from '../../shared/remote-runtime/pa
 import type { RuntimePairingReach } from '../../shared/runtime-pairing-reach'
 import type { MobileRelayMintFailure } from '../../shared/remote-runtime/relay/mobile-relay-mint-failure'
 import type { RuntimeAccessGrant } from '../../shared/runtime-access-grants'
+import type {
+  SelfHostedRelaySettings,
+  SelfHostedRelaySettingsResult
+} from '../../shared/remote-runtime/relay/self-hosted-relay-settings'
 
 export type MobileApi = {
   listNetworkInterfaces: () => Promise<{
@@ -83,6 +87,10 @@ export type MobileApi = {
   listRuntimeAccessGrants: () => Promise<{ grants: RuntimeAccessGrant[] }>
   revokeRuntimeAccess: (args: { deviceId: string }) => Promise<{ revoked: boolean }>
   getRelayStatus: () => Promise<MobileRelayStatusDetail>
+  relaySettings?: {
+    get: () => Promise<SelfHostedRelaySettings>
+    save: (origin: string | null) => Promise<SelfHostedRelaySettingsResult>
+  }
   onRelayStatusChanged: (callback: (detail: MobileRelayStatusDetail) => void) => () => void
   consumePendingUnpairedDeviceAuthFailure?: () => Promise<boolean>
   /** Fires (throttled, once per session) when an unpaired phone repeatedly fails direct-transport auth. */

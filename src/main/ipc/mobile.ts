@@ -1,4 +1,5 @@
 import { usesLegacyE2EE } from '../runtime/rpc/server/pairing/device-sighting'
+import { registerMobileRelaySettingsHandlers } from './mobile-relay-settings'
 import { app, ipcMain, shell, type IpcMainInvokeEvent } from 'electron'
 import type { RuntimeAccessGrant } from '../../shared/runtime-access-grants'
 import type { MobilePairingConnectionMode } from '../../shared/remote-runtime/pairing/mobile-pairing-connection-mode'
@@ -59,6 +60,7 @@ export function registerMobileHandlers(
   rpcServer: OrcaRuntimeRpcServer,
   dependencies: MobileHandlerDependencies = {}
 ): void {
+  registerMobileRelaySettingsHandlers()
   const firewallEnvironment = dependencies.firewallEnvironment ?? {
     platform: process.platform,
     isPackaged: app.isPackaged,

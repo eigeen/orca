@@ -30,6 +30,7 @@ import {
 import { useMobilePairingAddressPreference } from '../../mobile/use-mobile-pairing-address-preference'
 import { usePairingOfferExpiry } from '../../mobile/use-pairing-offer-expiry'
 import { shouldOpenMobilePairingAddress } from './mobile-pane-search'
+import { SelfHostedRelaySettingsSection } from './SelfHostedRelaySettingsSection'
 
 export function MobilePane(): React.JSX.Element {
   const autoRestoreFitMs = useAppStore((s) => s.settings?.mobileAutoRestoreFitMs ?? null)
@@ -346,6 +347,7 @@ export function MobilePane(): React.JSX.Element {
   return (
     <div className="space-y-6">
       <MachineNameField id="mobile-machine-name" />
+      <SelfHostedRelaySettingsSection />
 
       <MobilePairingSetupSection
         connectionMode={connectionMode}
