@@ -1,4 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('../network/direct-provider-requests', () => ({
+  DIRECT_PROVIDER_REQUESTS_ENABLED: true
+}))
 import { getDefaultVoiceSettings } from '../../shared/constants'
 import type { VoiceSettings } from '../../shared/speech-types'
 import type { GlobalSettings } from '../../shared/global-settings-types'

@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('../network/direct-provider-requests', () => ({
+  DIRECT_PROVIDER_REQUESTS_ENABLED: true
+}))
 import type { ProviderRateLimits } from '../../shared/rate-limit-types'
 import type { OpenCodeGoUsageWindows } from './opencode-go-status-parsing'
 import type * as usageFetcher from './opencode-go-usage-fetcher'

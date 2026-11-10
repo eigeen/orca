@@ -1,6 +1,7 @@
 import { readFetchResponseJsonWithinLimit } from '../../shared/fetch-response-body'
 import { cancelUnreadResponseBody } from '../lib/unread-response-body'
 import { getMainHttpClient } from '../network/http-client'
+import { requireDirectProviderRequests } from '../network/direct-provider-requests'
 import {
   readGoogleIdentityClaims,
   type AntigravityCredentialIdentity
@@ -14,6 +15,7 @@ const UNCONFIRMED = 'Google did not confirm the signed-in Antigravity account; n
 export async function fetchGoogleIdentity(
   accessToken: string
 ): Promise<AntigravityCredentialIdentity> {
+  requireDirectProviderRequests()
   let response: Response
   try {
     response = await getMainHttpClient().fetch(USERINFO_URL, {

@@ -12,6 +12,10 @@ import { runProcess } from '@orca/process-host'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('../network/direct-provider-requests', () => ({
+  DIRECT_PROVIDER_REQUESTS_ENABLED: true
+}))
 import { readZcodeV2PlanCredential, type ZcodeCredentialHost } from './zcode-v2-plan-credentials'
 import { readZcodeUsageCredentials } from '../rate-limits/zcode-usage-credentials'
 import { fetchZcodeRateLimits } from '../rate-limits/zcode-usage-fetcher'

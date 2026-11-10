@@ -1,6 +1,7 @@
 import type { ProviderRateLimits, RateLimitWindow } from '../../shared/rate-limit-types'
 import { ensureElectronProxyFromEnvironment } from '../network/proxy-settings'
 import { getMainHttpClient } from '../network/http-client'
+import { requireDirectProviderRequests } from '../network/direct-provider-requests'
 import { abortSignalWithTimeout } from '../lib/abort-signal-with-timeout'
 import {
   ClaudeUsageRequestError,
@@ -68,6 +69,7 @@ export async function fetchClaudeOAuthUsage(
   token: string,
   signal?: AbortSignal
 ): Promise<ProviderRateLimits> {
+  requireDirectProviderRequests()
   if (signal?.aborted) {
     return abortedClaudeRateLimitResult()
   }

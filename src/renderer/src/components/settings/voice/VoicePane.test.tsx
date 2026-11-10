@@ -84,6 +84,19 @@ describe('VoicePane', () => {
     )
     useShortcutLabelMock.mockReturnValue('Ctrl+Shift+Y')
     installWindowApi(vi.fn(async () => deniedMicrophoneResult))
+    const cloudCatalog: SpeechModelManifest[] = [
+      {
+        id: 'openai-transcription-fixture',
+        label: 'Cloud speech fixture',
+        description: '',
+        provider: 'openai',
+        type: 'openai',
+        language: 'multilingual',
+        sampleRate: 16000,
+        streaming: false
+      }
+    ]
+    window.api.speech.getCatalog = vi.fn(async () => cloudCatalog)
     window.api.speech.getOpenAiApiKeyStatus = vi.fn(async () => ({
       configured: true,
       protection: 'sealed' as const

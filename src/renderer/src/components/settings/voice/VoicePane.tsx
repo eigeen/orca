@@ -142,10 +142,11 @@ export function VoicePane({ settings, updateSettings }: VoicePaneProps): React.J
 
   const selectedModel = catalog.find((m) => m.id === voiceSettings.sttModel)
   const showOpenAiSettingsRow =
-    voiceSettings.openAiApiKeyConfigured ||
-    selectedModel?.provider === 'openai' ||
-    (settingsSearchQuery.trim() !== '' &&
-      matchesSettingsSearch(settingsSearchQuery, getOpenaiTranscriptionSearchEntry()))
+    catalog.some((model) => model.provider === 'openai') &&
+    (voiceSettings.openAiApiKeyConfigured ||
+      selectedModel?.provider === 'openai' ||
+      (settingsSearchQuery.trim() !== '' &&
+        matchesSettingsSearch(settingsSearchQuery, getOpenaiTranscriptionSearchEntry())))
 
   const openOpenAiDialog = (modelId: string | null = null): void => {
     setPendingCloudModelId(modelId)

@@ -1,4 +1,6 @@
 import type { ProviderRateLimits } from '../../../shared/rate-limit-types'
+import { DIRECT_PROVIDER_REQUESTS_ENABLED } from '../../network/direct-provider-requests'
+import { disabledUsageSnapshot } from '../disabled-usage-snapshot'
 import type { MiniMaxEndpoint } from '../../../shared/global-settings-types'
 import {
   extractMiniMaxCookieValue,
@@ -64,6 +66,9 @@ async function fetchMiniMaxResponseWithCookie(args: {
 export async function fetchMiniMaxRateLimits(
   options: FetchMiniMaxRateLimitsOptions
 ): Promise<ProviderRateLimits> {
+  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+    return disabledUsageSnapshot('minimax')
+  }
   const rawCookie = options.cookie?.trim() ?? ''
   const rawApiKey = options.apiKey?.trim() ?? ''
   const endpointMode: MiniMaxEndpoint = options.endpointMode ?? 'overseas'

@@ -269,7 +269,13 @@ describe('RateLimitService', () => {
     })
 
     expect(fetchClaudeRateLimits).toHaveBeenLastCalledWith(
-      expect.objectContaining({ allowPtyFallback: true, allowUsagePanelSupplement: true })
+      expect.objectContaining({
+        authPreparation: expect.objectContaining({
+          runtime: 'wsl',
+          wslDistro: 'Ubuntu',
+          provenance: 'managed:wsl-account-1:wsl:Ubuntu'
+        })
+      })
     )
 
     expect(service.getState().inactiveClaudeAccounts).not.toEqual(

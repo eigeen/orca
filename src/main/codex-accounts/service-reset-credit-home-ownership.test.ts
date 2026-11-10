@@ -1,4 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+
+vi.mock('../network/direct-provider-requests', () => ({
+  DIRECT_PROVIDER_REQUESTS_ENABLED: true
+}))
 import { installFakeAppEnvironment } from '../../../config/scripts/test-runtime/environment/vitest-host-ports-setup'
 import { join } from 'node:path'
 import { realpathSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'

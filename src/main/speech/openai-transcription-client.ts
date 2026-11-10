@@ -1,4 +1,5 @@
 import { resampleToRate } from './stt-audio-resample'
+import { requireDirectProviderRequests } from '../network/direct-provider-requests'
 
 export const OPENAI_TRANSCRIPTION_MODEL_BY_ID: Record<string, string> = {
   'openai-gpt-4o-mini-transcribe': 'gpt-4o-mini-transcribe',
@@ -149,6 +150,7 @@ export class OpenAiTranscriptionSession {
   }
 
   private async upload(form: FormData, signal: AbortSignal): Promise<string> {
+    requireDirectProviderRequests()
     const response = await fetch(OPENAI_TRANSCRIPTION_URL, {
       method: 'POST',
       signal,

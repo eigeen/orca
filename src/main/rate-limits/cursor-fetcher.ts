@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto'
 import { getMainHttpClient } from '../network/http-client'
+import { DIRECT_PROVIDER_REQUESTS_ENABLED } from '../network/direct-provider-requests'
+import { disabledUsageSnapshot } from './disabled-usage-snapshot'
 import type { ProviderRateLimits, UsageRateLimitSource } from '../../shared/rate-limit-types'
 import { abortSignalWithTimeout } from '../lib/abort-signal-with-timeout'
 import {
@@ -212,6 +214,9 @@ function credentialFailure(readResult: CursorAuthReadResult): ProviderRateLimits
 export async function fetchCursorRateLimits(
   options: { signal?: AbortSignal; authReadResult?: CursorAuthReadResult } = {}
 ): Promise<ProviderRateLimits> {
+  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+    return disabledUsageSnapshot('cursor')
+  }
   const readResult = options.authReadResult ?? (await readCursorAuthSession())
   const failure = credentialFailure(readResult)
   if (failure || readResult.status !== 'ok') {

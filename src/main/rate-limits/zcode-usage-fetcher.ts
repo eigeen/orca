@@ -1,3 +1,5 @@
+import { DIRECT_PROVIDER_REQUESTS_ENABLED } from '../network/direct-provider-requests'
+import { disabledUsageSnapshot } from './disabled-usage-snapshot'
 import {
   readZcodeUsageCredentials,
   resolveUsageCredentials,
@@ -132,6 +134,9 @@ export async function fetchZcodeRateLimits(
     signal?: AbortSignal
   } = {}
 ): Promise<ProviderRateLimits> {
+  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+    return disabledUsageSnapshot('zcode')
+  }
   const plan = options.planCredential
   const saved = plan
     ? resolveUsageCredentials(plan.apiKey, plan.baseUrl, ZCODE_PLAN_CREDENTIAL_SOURCE)

@@ -1,4 +1,5 @@
 import { getMainHttpClient } from '../network/http-client'
+import { DIRECT_PROVIDER_REQUESTS_ENABLED } from '../network/direct-provider-requests'
 import type {
   ProviderRateLimits,
   RateLimitWindow,
@@ -76,8 +77,7 @@ function parseResetDescription(isoString: string | undefined): string | null {
   if (Number.isNaN(date.getTime())) {
     return null
   }
-  const isToday = date.toDateString() === new Date().toDateString()
-  return isToday
+  return date.toDateString() === new Date().toDateString()
     ? date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
     : date.toLocaleDateString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })
 }
@@ -283,6 +283,9 @@ async function fetchMonthlyUsageFallback(
 export async function fetchGrokRateLimits(
   options: { signal?: AbortSignal; authReadResult?: GrokAuthReadResult } = {}
 ): Promise<ProviderRateLimits> {
+  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+    return result('idle', null)
+  }
   const readResult = options.authReadResult ?? readGrokAuthSession()
   if (readResult.status === 'missing') {
     return result('unavailable', 'Not signed in to Grok — run grok login')

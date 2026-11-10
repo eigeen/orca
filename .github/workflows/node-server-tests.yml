@@ -60,9 +60,10 @@ concurrency:
 
 jobs:
   changes:
+    # A template needs every qualification lane, even for a desktop-only change.
     if: >-
-      github.event_name == 'push' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.draft != true)
+      ${{ !inputs.build_template && (github.event_name == 'push' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.draft != true)) }}
     runs-on: ${{ inputs.fast_runners && 'blacksmith-2vcpu-ubuntu-2404' || 'ubuntu-latest' }}
     timeout-minutes: 5
     outputs:

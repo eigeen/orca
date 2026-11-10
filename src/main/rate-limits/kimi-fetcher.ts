@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises'
 import { join, win32 as pathWin32 } from 'node:path'
 import { getMainHttpClient } from '../network/http-client'
+import { DIRECT_PROVIDER_REQUESTS_ENABLED } from '../network/direct-provider-requests'
+import { disabledUsageSnapshot } from './disabled-usage-snapshot'
 import type {
   ProviderRateLimits,
   RateLimitWindow,
@@ -284,6 +286,9 @@ function result(
 export async function fetchKimiRateLimits(options?: {
   home?: KimiHomeResolution
 }): Promise<ProviderRateLimits> {
+  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+    return disabledUsageSnapshot('kimi')
+  }
   const home: KimiHomeResolution = options?.home ?? {
     runtime: 'host',
     wslDistro: null,

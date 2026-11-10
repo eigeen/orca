@@ -1,4 +1,6 @@
 import type { ProviderRateLimits } from '../../shared/rate-limit-types'
+import { DIRECT_PROVIDER_REQUESTS_ENABLED } from '../network/direct-provider-requests'
+import { disabledUsageSnapshot } from './disabled-usage-snapshot'
 import {
   readClaudeOAuthCredentials,
   type ClaudeOAuthCredentialReadResult,
@@ -15,6 +17,9 @@ import { CLAUDE_PROFILE_MISSING_MESSAGE } from '../../shared/claude-profile-rout
 export async function fetchActiveClaudeRateLimits(
   options?: ClaudeRateLimitFetchOptions
 ): Promise<ProviderRateLimits> {
+  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+    return disabledUsageSnapshot('claude')
+  }
   const usageError = options?.authPreparation?.usageError
   if (usageError) {
     return makeClaudeUsageResult('error', usageError, {

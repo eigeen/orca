@@ -1,4 +1,6 @@
 import type { NetworkProxySettings } from '../../shared/network-proxy'
+import { DIRECT_PROVIDER_REQUESTS_ENABLED } from '../network/direct-provider-requests'
+import { disabledUsageSnapshot } from './disabled-usage-snapshot'
 import type { ProviderRateLimits, UsageRateLimitMetadata } from '../../shared/rate-limit-types'
 import {
   resolveOpenCodeGoApiKey,
@@ -90,6 +92,9 @@ function apiFailureResult(
 export async function fetchOpenCodeGoUsage(
   input: OpenCodeGoUsageSourceInput
 ): Promise<ProviderRateLimits> {
+  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+    return disabledUsageSnapshot('opencode-go')
+  }
   const context = input.settingsApiKey?.trim()
     ? {}
     : {

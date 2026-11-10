@@ -1,11 +1,12 @@
 import type { SpeechModelManifest } from '../../shared/speech-types'
+import { DIRECT_PROVIDER_REQUESTS_ENABLED } from '../network/direct-provider-requests'
 import {
   DICTATION_LANGUAGES,
   SENSE_VOICE_DICTATION_LANGUAGES
 } from '../../shared/dictation-language'
 import { getSpeechModelDownloadMetadata } from './model-download-catalog'
 
-export const SPEECH_MODEL_CATALOG: SpeechModelManifest[] = [
+const speechModels: SpeechModelManifest[] = [
   {
     id: 'parakeet-tdt-0.6b-v3-int8',
     label: 'Parakeet TDT v3',
@@ -155,6 +156,10 @@ export const SPEECH_MODEL_CATALOG: SpeechModelManifest[] = [
     streaming: false
   }
 ]
+
+export const SPEECH_MODEL_CATALOG = speechModels.filter(
+  (model) => DIRECT_PROVIDER_REQUESTS_ENABLED || model.provider !== 'openai'
+)
 
 export function getCatalogModel(id: string): SpeechModelManifest | undefined {
   return SPEECH_MODEL_CATALOG.find((m) => m.id === id)

@@ -1,5 +1,9 @@
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('../network/direct-provider-requests', () => ({
+  DIRECT_PROVIDER_REQUESTS_ENABLED: true
+}))
 import { setMainHttpClient } from '../network/http-client'
 
 const fetchMock = vi.fn()

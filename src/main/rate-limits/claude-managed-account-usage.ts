@@ -1,4 +1,6 @@
 import type { ProviderRateLimits } from '../../shared/rate-limit-types'
+import { DIRECT_PROVIDER_REQUESTS_ENABLED } from '../network/direct-provider-requests'
+import { disabledUsageSnapshot } from './disabled-usage-snapshot'
 import {
   getClaudeProfileRouter,
   getClaudeWslProfileRouter
@@ -21,6 +23,9 @@ export async function fetchInactiveClaudeAccountUsage(
   account: InactiveClaudeAccount,
   options: ClaudeManagedAccountUsageOptions = {}
 ): Promise<ProviderRateLimits> {
+  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+    return disabledUsageSnapshot('claude')
+  }
   if (account.managedAuthRuntime !== 'wsl') {
     // Covered accounts share System Default usage and launch routing.
     const authPreparation = getClaudeProfileRouter()?.accountUsagePreparation(account.id)

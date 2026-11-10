@@ -18,6 +18,10 @@ import {
 import { spawnProcessOnWorkerThread } from '../worker-thread-child-process/worker-thread-child-process'
 import { buildConfiguredProxyEnv } from '../../shared/network-proxy'
 import { getMainHttpClient } from '../network/http-client'
+import {
+  DIRECT_PROVIDER_REQUESTS_ENABLED,
+  requireDirectProviderRequests
+} from '../network/direct-provider-requests'
 import { probeCodexAuthPresence } from './codex-auth-presence'
 import {
   fetchCodexRateLimitsViaBackend,
@@ -77,7 +81,8 @@ function processEnvWithoutCodexHome(): NodeJS.ProcessEnv {
   return env
 }
 
-function requestCodexBackend(url: string, init: RequestInit): Promise<Response> {
+async function requestCodexBackend(url: string, init: RequestInit): Promise<Response> {
+  requireDirectProviderRequests()
   // Keep account authentication explicit; the desktop session may hold unrelated cookies.
   return getMainHttpClient().fetch(url, { ...init, credentials: 'omit' })
 }
@@ -114,10 +119,11 @@ async function fetchViaRpc(options?: CodexRateLimitFetchOptions): Promise<Provid
   })
 }
 
-export function consumeCodexRateLimitResetCredit(options: {
+export async function consumeCodexRateLimitResetCredit(options: {
   codexHomePath?: string | null
   idempotencyKey: string
 }): Promise<CodexRateLimitResetOutcome> {
+  requireDirectProviderRequests()
   return consumeCodexRateLimitResetCreditFromBackend(options, requestCodexBackend)
 }
 
@@ -125,6 +131,9 @@ async function supplementBackendMetadata(
   limits: ProviderRateLimits,
   options?: CodexRateLimitFetchOptions
 ): Promise<ProviderRateLimits> {
+  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+    return { ...limits, rateLimitResetCredits: null }
+  }
   const withSession = await supplementCodexSessionWindow(limits, requestCodexBackend, options)
   return supplementCodexRateLimitResetCredits(withSession, requestCodexBackend, options)
 }
@@ -143,6 +152,9 @@ function codexUnavailable(error: string, status: 'error' | 'unavailable'): Provi
 async function fetchBackendUsage(
   options: CodexRateLimitFetchOptions | undefined
 ): Promise<ProviderRateLimits | null> {
+  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+    return null
+  }
   try {
     const result = await fetchCodexRateLimitsViaBackend(requestCodexBackend, options)
     if (options?.signal?.aborted) {

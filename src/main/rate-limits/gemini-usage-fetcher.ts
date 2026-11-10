@@ -1,4 +1,6 @@
 import { getMainHttpClient } from '../network/http-client'
+import { DIRECT_PROVIDER_REQUESTS_ENABLED } from '../network/direct-provider-requests'
+import { disabledUsageSnapshot } from './disabled-usage-snapshot'
 import type { ProviderRateLimits, UsageRateLimitFailureKind } from '../../shared/rate-limit-types'
 import {
   loadProjectId,
@@ -218,6 +220,9 @@ async function fetchViaOauthCreds(
 export async function fetchGeminiRateLimits(
   geminiCliOAuthEnabled = false
 ): Promise<ProviderRateLimits> {
+  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+    return disabledUsageSnapshot('gemini')
+  }
   if (!geminiCliOAuthEnabled) {
     // OAuth sources include other apps' macOS folders; background polling requires user opt-in.
     return {
