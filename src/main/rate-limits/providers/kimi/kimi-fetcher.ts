@@ -3,7 +3,7 @@ import { join, win32 as pathWin32 } from 'node:path'
 import { getMainHttpClient } from '../../../network/http-client'
 import type { DirectQuotaQueryOptions } from '../../direct-quota-query-options'
 import { abortSignalWithTimeout } from '../../../lib/abort-signal-with-timeout'
-import { disabledUsageSnapshot } from '../../service/disabled-usage-snapshot'
+import { directQuotaDisabledSnapshot } from '../../service/disabled-usage-snapshot'
 import type {
   ProviderRateLimits,
   RateLimitWindow,
@@ -288,7 +288,7 @@ export async function fetchKimiRateLimits(
   options?: DirectQuotaQueryOptions & { home?: KimiHomeResolution }
 ): Promise<ProviderRateLimits> {
   if (options?.allowDirectQuotaQueries !== true || options?.signal?.aborted) {
-    return disabledUsageSnapshot('kimi')
+    return directQuotaDisabledSnapshot('kimi')
   }
   const home: KimiHomeResolution = options?.home ?? {
     runtime: 'host',

@@ -4769,6 +4769,7 @@
             "notSignedIn": "未登入",
             "allAgents": "所有代理程式",
             "usageDetails": "用量詳細資訊與歷程記錄",
+            "directQuotaDisabled": "額度查詢已關閉",
             "loadingUsage": "正在載入用量…",
             "usageUnavailable": "無法取得用量",
             "noUsageData": "無用量資料",

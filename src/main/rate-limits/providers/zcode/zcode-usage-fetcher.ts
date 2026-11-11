@@ -1,5 +1,5 @@
 import type { DirectQuotaQueryOptions } from '../../direct-quota-query-options'
-import { disabledUsageSnapshot } from '../../service/disabled-usage-snapshot'
+import { directQuotaDisabledSnapshot } from '../../service/disabled-usage-snapshot'
 import {
   readZcodeUsageCredentials,
   resolveUsageCredentials,
@@ -131,7 +131,7 @@ export async function fetchZcodeRateLimits(
     } = {}
 ): Promise<ProviderRateLimits> {
   if (options.allowDirectQuotaQueries !== true || options.signal?.aborted) {
-    return disabledUsageSnapshot('zcode')
+    return directQuotaDisabledSnapshot('zcode')
   }
   const plan = options.planCredential
   const saved = plan

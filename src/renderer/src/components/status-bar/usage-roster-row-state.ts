@@ -49,6 +49,15 @@ export function getUsageRosterRowState(
       detail: getOwnerNotSetUpNote(placeholder, t)
     }
   }
+  if (provider.usageMetadata?.failureKind === 'direct-quota-disabled') {
+    return {
+      kind: 'unavailable',
+      statusLabel: t(
+        'auto.components.status.bar.UsageRosterPanel.directQuotaDisabled',
+        'Quota queries are off'
+      )
+    }
+  }
   if (provider.status === 'idle' || provider.status === 'fetching') {
     return {
       kind: 'loading',

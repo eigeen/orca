@@ -284,7 +284,7 @@ export async function fetchGrokRateLimits(
   options: DirectQuotaQueryOptions & { authReadResult?: GrokAuthReadResult } = {}
 ): Promise<ProviderRateLimits> {
   if (options.allowDirectQuotaQueries !== true || options.signal?.aborted) {
-    return result('idle', null)
+    return result('idle', null, { failureKind: 'direct-quota-disabled' })
   }
   const readResult = options.authReadResult ?? readGrokAuthSession()
   if (readResult.status === 'missing') {

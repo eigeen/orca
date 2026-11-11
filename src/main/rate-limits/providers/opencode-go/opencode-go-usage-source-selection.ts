@@ -4,7 +4,7 @@ import type {
   UsageRateLimitMetadata
 } from '../../../../shared/rate-limit-types'
 import type { DirectQuotaQueryOptions } from '../../direct-quota-query-options'
-import { disabledUsageSnapshot } from '../../service/disabled-usage-snapshot'
+import { directQuotaDisabledSnapshot } from '../../service/disabled-usage-snapshot'
 import {
   resolveOpenCodeGoApiKey,
   type OpenCodeGoApiKeyResolution
@@ -95,7 +95,7 @@ export async function fetchOpenCodeGoUsage(
   input: OpenCodeGoUsageSourceInput
 ): Promise<ProviderRateLimits> {
   if (input.allowDirectQuotaQueries !== true || input.signal?.aborted) {
-    return disabledUsageSnapshot('opencode-go')
+    return directQuotaDisabledSnapshot('opencode-go')
   }
   const context = input.settingsApiKey?.trim()
     ? {}

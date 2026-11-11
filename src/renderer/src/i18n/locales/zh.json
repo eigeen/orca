@@ -4296,6 +4296,7 @@
             "notSignedIn": "未登录",
             "allAgents": "所有智能体",
             "usageDetails": "使用详情与历史",
+            "directQuotaDisabled": "额度查询已关闭",
             "loadingUsage": "正在加载使用量…",
             "usageUnavailable": "使用量不可用",
             "noUsageData": "无使用数据",

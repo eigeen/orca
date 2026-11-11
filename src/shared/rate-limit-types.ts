@@ -62,6 +62,7 @@ export type UsageRateLimitFailureKind =
   | 'rate-limited'
   | 'cli-unavailable'
   | 'usage-unavailable'
+  | 'direct-quota-disabled'
   | 'unknown'
 
 /** Renderer-only: why a provider set up on this device shows no usage under the owning host. */

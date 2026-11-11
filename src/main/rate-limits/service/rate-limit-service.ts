@@ -109,14 +109,12 @@ export class RateLimitService extends RateLimitServiceAccountRefresh {
 
   async refreshAfterDirectQuotaSettingChange(): Promise<void> {
     this.abortActiveFetchCycle()
-    this.clearQueuedFetches()
     this.lastInactiveClaudeFetchAt = 0
     if (!this.directQuotaQueriesEnabled()) {
       this.inactiveClaudeCache.clear()
       this.inactiveCodexCache.clear()
       this.lastInactiveCodexFetchAt = 0
     }
-    await this.waitForFetchIdle()
     await this.refresh()
   }
 

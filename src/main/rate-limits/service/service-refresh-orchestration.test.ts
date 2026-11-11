@@ -5,6 +5,7 @@ import { fetchCodexRateLimits } from '../providers/codex/codex-fetcher'
 import { fetchZcodeRateLimits } from '../providers/zcode/zcode-usage-fetcher'
 import { fetchOpenCodeGoUsage } from '../providers/opencode-go/opencode-go-usage-source-selection'
 import {
+  deferred,
   errorProvider,
   okProvider,
   resetRateLimitProviderMocks
@@ -75,6 +76,34 @@ describe('RateLimitService', () => {
     resetRateLimitProviderMocks()
     vi.mocked(fetchActiveClaudeRateLimits).mockResolvedValue(okProvider('claude', 0, 1_000))
     vi.mocked(fetchCodexRateLimits).mockResolvedValue(okProvider('codex', 0, 1_000))
+  })
+
+  it('refreshes with the new quota setting when a manual refresh overlaps an aborted poll', async () => {
+    const service = new RateLimitService()
+    let enabled = false
+    service.setDirectQuotaQueriesEnabledResolver(() => enabled)
+    const started = deferred<void>()
+    const oldResult = deferred<ReturnType<typeof okProvider>>()
+    vi.mocked(fetchActiveClaudeRateLimits)
+      .mockImplementationOnce(() => {
+        started.resolve(undefined)
+        return oldResult.promise
+      })
+      .mockImplementation(async (options) =>
+        okProvider('claude', options?.allowDirectQuotaQueries === true ? 37 : 10)
+      )
+
+    const previous = service.refreshIfStale()
+    await started.promise
+    enabled = true
+    const settingRefresh = service.refreshAfterDirectQuotaSettingChange()
+    const manualRefresh = service.refresh()
+    oldResult.resolve(okProvider('claude', 10))
+    await previous
+
+    expect(service.getState().claude?.session?.usedPercent).toBe(37)
+    await expect(manualRefresh).resolves.toMatchObject({ claude: { session: { usedPercent: 37 } } })
+    await settingRefresh
   })
 
   it('does not keep a previous ZCode account quota after a failed account switch', async () => {

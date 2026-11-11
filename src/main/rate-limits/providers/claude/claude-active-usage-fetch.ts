@@ -1,5 +1,5 @@
 import type { ProviderRateLimits } from '../../../../shared/rate-limit-types'
-import { disabledUsageSnapshot } from '../../service/disabled-usage-snapshot'
+import { directQuotaDisabledSnapshot } from '../../service/disabled-usage-snapshot'
 import {
   readClaudeOAuthCredentials,
   type ClaudeOAuthCredentialReadResult,
@@ -17,7 +17,7 @@ export async function fetchActiveClaudeRateLimits(
   options?: ClaudeRateLimitFetchOptions
 ): Promise<ProviderRateLimits> {
   if (options?.allowDirectQuotaQueries !== true) {
-    return disabledUsageSnapshot('claude')
+    return directQuotaDisabledSnapshot('claude')
   }
   const usageError = options?.authPreparation?.usageError
   if (usageError) {

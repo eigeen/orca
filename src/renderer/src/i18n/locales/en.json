@@ -5254,6 +5254,7 @@
             "notSignedIn": "not signed in",
             "allAgents": "all agents",
             "usageDetails": "Usage details & history",
+            "directQuotaDisabled": "Quota queries are off",
             "loadingUsage": "Loading usage…",
             "usageUnavailable": "Usage unavailable",
             "noUsageData": "No usage data",

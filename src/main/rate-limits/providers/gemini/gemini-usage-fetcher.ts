@@ -5,7 +5,7 @@ import type {
 } from '../../../../shared/rate-limit-types'
 import type { DirectQuotaQueryOptions } from '../../direct-quota-query-options'
 import { abortSignalWithTimeout } from '../../../lib/abort-signal-with-timeout'
-import { disabledUsageSnapshot } from '../../service/disabled-usage-snapshot'
+import { directQuotaDisabledSnapshot } from '../../service/disabled-usage-snapshot'
 import {
   loadProjectId,
   readAuthJson,
@@ -220,7 +220,7 @@ export async function fetchGeminiRateLimits(
   options: DirectQuotaQueryOptions = {}
 ): Promise<ProviderRateLimits> {
   if (options.allowDirectQuotaQueries !== true || options.signal?.aborted) {
-    return disabledUsageSnapshot('gemini')
+    return directQuotaDisabledSnapshot('gemini')
   }
   if (!geminiCliOAuthEnabled) {
     // OAuth sources include other apps' macOS folders; background polling requires user opt-in.

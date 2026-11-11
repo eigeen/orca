@@ -2,7 +2,7 @@ import type { ProviderRateLimits } from '../../../../shared/rate-limit-types'
 import type { MiniMaxEndpoint } from '../../../../shared/global-settings-types'
 import type { DirectQuotaQueryOptions } from '../../direct-quota-query-options'
 import { abortSignalWithTimeout } from '../../../lib/abort-signal-with-timeout'
-import { disabledUsageSnapshot } from '../../service/disabled-usage-snapshot'
+import { directQuotaDisabledSnapshot } from '../../service/disabled-usage-snapshot'
 import {
   extractMiniMaxCookieValue,
   fetchMiniMaxWithApiKey,
@@ -63,7 +63,7 @@ export async function fetchMiniMaxRateLimits(
   options: FetchMiniMaxRateLimitsOptions
 ): Promise<ProviderRateLimits> {
   if (options.allowDirectQuotaQueries !== true || options.signal?.aborted) {
-    return disabledUsageSnapshot('minimax')
+    return directQuotaDisabledSnapshot('minimax')
   }
   const rawCookie = options.cookie?.trim() ?? ''
   const rawApiKey = options.apiKey?.trim() ?? ''

@@ -1,6 +1,26 @@
 import { RateLimitServiceProviderCycles } from './service-provider-cycles'
 
 export abstract class RateLimitServiceFetchQueue extends RateLimitServiceProviderCycles {
+  private async finishFetchQueue(): Promise<void> {
+    this.isFetching = false
+    // An aborted cycle can leave a refresh queued with the new settings.
+    if (this.fullFetchQueued) {
+      this.fullFetchQueued = false
+      await this.fetchAll({ force: true })
+    } else if (this.codexOnlyFetchQueued) {
+      this.codexOnlyFetchQueued = false
+      await this.fetchCodexOnly({ force: true })
+    } else if (this.claudeOnlyFetchQueued) {
+      this.claudeOnlyFetchQueued = false
+      await this.fetchClaudeOnly({ force: true })
+    } else if (this.grokOnlyFetchQueued) {
+      this.grokOnlyFetchQueued = false
+      await this.fetchGrokOnly({ force: true })
+    } else {
+      this.resolveFetchIdleWaiters()
+    }
+  }
+
   protected async fetchAll(options?: { force?: boolean }): Promise<void> {
     if (this.isFetching) {
       if (options?.force) {
@@ -58,8 +78,7 @@ export abstract class RateLimitServiceFetchQueue extends RateLimitServiceProvide
         }
       }
     } finally {
-      this.isFetching = false
-      this.resolveFetchIdleWaiters()
+      await this.finishFetchQueue()
     }
   }
 
@@ -117,8 +136,7 @@ export abstract class RateLimitServiceFetchQueue extends RateLimitServiceProvide
         }
       }
     } finally {
-      this.isFetching = false
-      this.resolveFetchIdleWaiters()
+      await this.finishFetchQueue()
     }
   }
 
@@ -179,8 +197,7 @@ export abstract class RateLimitServiceFetchQueue extends RateLimitServiceProvide
         }
       }
     } finally {
-      this.isFetching = false
-      this.resolveFetchIdleWaiters()
+      await this.finishFetchQueue()
     }
   }
 
@@ -238,8 +255,7 @@ export abstract class RateLimitServiceFetchQueue extends RateLimitServiceProvide
         }
       }
     } finally {
-      this.isFetching = false
-      this.resolveFetchIdleWaiters()
+      await this.finishFetchQueue()
     }
   }
 }

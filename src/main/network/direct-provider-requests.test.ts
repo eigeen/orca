@@ -30,7 +30,13 @@ describe('direct provider requests', () => {
     const fetch = vi.fn(async () => new Response(null, { status: 403 }))
     setMainHttpClient({ fetch, proxySession: () => null })
 
-    const noUsage = { provider: 'claude', session: null, weekly: null, status: 'idle' }
+    const noUsage = {
+      provider: 'claude',
+      session: null,
+      weekly: null,
+      status: 'idle',
+      usageMetadata: { failureKind: 'direct-quota-disabled' }
+    }
     await expect(fetchActiveClaudeRateLimits()).resolves.toMatchObject(noUsage)
     await expect(
       fetchInactiveClaudeAccountUsage({ id: 'inactive-account' })

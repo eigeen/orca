@@ -3,7 +3,7 @@ import { getMainHttpClient } from '../../../network/http-client'
 import type { ProviderRateLimits, UsageRateLimitSource } from '../../../../shared/rate-limit-types'
 import { abortSignalWithTimeout } from '../../../lib/abort-signal-with-timeout'
 import type { DirectQuotaQueryOptions } from '../../direct-quota-query-options'
-import { disabledUsageSnapshot } from '../../service/disabled-usage-snapshot'
+import { directQuotaDisabledSnapshot } from '../../service/disabled-usage-snapshot'
 import {
   readCursorAuthSession,
   type CursorAuthReadResult,
@@ -215,7 +215,7 @@ export async function fetchCursorRateLimits(
   options: DirectQuotaQueryOptions & { authReadResult?: CursorAuthReadResult } = {}
 ): Promise<ProviderRateLimits> {
   if (options.allowDirectQuotaQueries !== true || options.signal?.aborted) {
-    return disabledUsageSnapshot('cursor')
+    return directQuotaDisabledSnapshot('cursor')
   }
   const readResult = options.authReadResult ?? (await readCursorAuthSession())
   const failure = credentialFailure(readResult)

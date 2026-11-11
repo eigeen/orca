@@ -96,6 +96,12 @@ export abstract class RateLimitServicePolling extends RateLimitServiceFetchQueue
   protected getActiveWindowRefreshPlan(now: number): ActiveWindowRefreshPlan {
     const retryableFailures: ActiveRateLimitProvider[] = []
     for (const { provider, limits } of this.getActiveProviderState()) {
+      if (
+        limits?.usageMetadata?.failureKind === 'direct-quota-disabled' &&
+        !this.directQuotaQueriesEnabled()
+      ) {
+        continue
+      }
       if (!limits || limits.status === 'idle' || limits.status === 'fetching') {
         return { kind: 'full' }
       }

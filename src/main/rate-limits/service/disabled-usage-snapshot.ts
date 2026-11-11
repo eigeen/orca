@@ -13,3 +13,12 @@ export function disabledUsageSnapshot(
     status: 'idle'
   }
 }
+
+export function directQuotaDisabledSnapshot(
+  provider: ProviderRateLimits['provider']
+): ProviderRateLimits {
+  return {
+    ...disabledUsageSnapshot(provider),
+    usageMetadata: { failureKind: 'direct-quota-disabled' }
+  }
+}

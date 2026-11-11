@@ -1,5 +1,5 @@
 import type { ProviderRateLimits } from '../../../../shared/rate-limit-types'
-import { disabledUsageSnapshot } from '../../service/disabled-usage-snapshot'
+import { directQuotaDisabledSnapshot } from '../../service/disabled-usage-snapshot'
 import {
   getClaudeProfileRouter,
   getClaudeWslProfileRouter
@@ -23,7 +23,7 @@ export async function fetchInactiveClaudeAccountUsage(
   options: ClaudeManagedAccountUsageOptions = {}
 ): Promise<ProviderRateLimits> {
   if (options.allowDirectQuotaQueries !== true) {
-    return disabledUsageSnapshot('claude')
+    return directQuotaDisabledSnapshot('claude')
   }
   if (account.managedAuthRuntime !== 'wsl') {
     // Covered accounts share System Default usage and launch routing.
