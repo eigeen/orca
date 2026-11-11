@@ -55,6 +55,8 @@ export type OrcaProfileAuthStatus = {
   capabilities?: OrcaCloudCapabilities
   credentialError?: string
   setupMessage?: string
+  /** Absent for official Relay. Null if the explicit self-hosted configuration is invalid. */
+  selfHostedRelayOrigin?: string | null
 }
 
 export type OrcaProfileSummary = {
@@ -335,10 +337,9 @@ export function getOrcaProfileBrowserPartitionSegment(profileId: string): string
 }
 
 export function getOrcaProfileBrowserDefaultPartition(profileId: string): string {
-  if (profileId === DEFAULT_LOCAL_ORCA_PROFILE_ID) {
-    return ORCA_BROWSER_PARTITION
-  }
-  return `persist:orca-profile-${getOrcaProfileBrowserPartitionSegment(profileId)}-browser-default`
+  return profileId === DEFAULT_LOCAL_ORCA_PROFILE_ID
+    ? ORCA_BROWSER_PARTITION
+    : `persist:orca-profile-${getOrcaProfileBrowserPartitionSegment(profileId)}-browser-default`
 }
 
 export function getOrcaProfileBrowserSessionPartition(

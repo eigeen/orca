@@ -1,4 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('../network/direct-provider-requests', () => ({
+  requireDirectProviderRequests: () => undefined
+}))
 import {
   OpenAiTranscriptionSession,
   sanitizeOpenAiTranscriptionErrorMessage

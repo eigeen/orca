@@ -12,6 +12,7 @@ import { runProcess } from '@orca/process-host'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
 import { readZcodeV2PlanCredential, type ZcodeCredentialHost } from './zcode-v2-plan-credentials'
 import { readZcodeUsageCredentials } from '../rate-limits/providers/zcode/zcode-usage-credentials'
 import { fetchZcodeRateLimits } from '../rate-limits/providers/zcode/zcode-usage-fetcher'
@@ -71,7 +72,10 @@ describe('upstream-written ZCode v2 stores', () => {
         apiKey: `synthetic-${name}-key`,
         baseUrl: name === 'zai' ? 'https://api.z.ai' : 'https://open.bigmodel.cn'
       })
-      const result = await fetchZcodeRateLimits({ credentialHost: host })
+      const result = await fetchZcodeRateLimits({
+        allowDirectQuotaQueries: true,
+        credentialHost: host
+      })
       expect(result.status).toBe('ok')
       const call = vi.mocked(fetch).mock.calls[0]
       expect(String(call[0])).toContain(name === 'zai' ? 'api.z.ai' : 'open.bigmodel.cn')
@@ -128,7 +132,10 @@ describe('upstream-written ZCode v2 stores', () => {
     if (kind === 'missing-key') {
       writeFileSync(join(dir, '.zcode', 'v2', 'credentials.json'), '{}')
     }
-    const result = await fetchZcodeRateLimits({ credentialHost: host })
+    const result = await fetchZcodeRateLimits({
+      allowDirectQuotaQueries: true,
+      credentialHost: host
+    })
     expect(['unavailable', 'error']).toContain(result.status)
     expect(result.session).toBeNull()
     expect(fetch).not.toHaveBeenCalled()
@@ -164,7 +171,9 @@ describe('upstream-written ZCode v2 stores', () => {
       path,
       JSON.stringify({ [identityKey]: 'synthetic', [apiKey]: 'key\r\nInjected: value' })
     )
-    expect((await fetchZcodeRateLimits({ credentialHost: host })).status).toBe('error')
+    expect(
+      (await fetchZcodeRateLimits({ allowDirectQuotaQueries: true, credentialHost: host })).status
+    ).toBe('error')
     expect(fetch).not.toHaveBeenCalled()
   })
 
@@ -201,7 +210,10 @@ describe('upstream-written ZCode v2 stores', () => {
         }
         return quota()
       })
-      const result = await fetchZcodeRateLimits({ credentialHost: host })
+      const result = await fetchZcodeRateLimits({
+        allowDirectQuotaQueries: true,
+        credentialHost: host
+      })
       expect(result.status).toBe('unavailable')
       expect(result.session).toBeNull()
     }
@@ -290,12 +302,15 @@ describe('external v2 file boundaries', () => {
       writeFileSync(path, JSON.stringify(config))
       rmSync(join(dir, '.zcode', 'v2', 'credentials.json'))
       expect(readZcodeUsageCredentials({ credentialHost: host }).status).toBe('unavailable')
-      expect((await fetchZcodeRateLimits({ credentialHost: host })).status).toBe('unavailable')
+      expect(
+        (await fetchZcodeRateLimits({ allowDirectQuotaQueries: true, credentialHost: host })).status
+      ).toBe('unavailable')
       expect(fetch).not.toHaveBeenCalled()
       expect(readFileSync(path, 'utf8')).toBe(JSON.stringify(config))
       expect(
         (
           await fetchZcodeRateLimits({
+            allowDirectQuotaQueries: true,
             credentialHost: host,
             planCredential: {
               apiKey: 'synthetic-orca-key',

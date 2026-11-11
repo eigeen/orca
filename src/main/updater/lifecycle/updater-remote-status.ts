@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import { isPackagedUpdateEnabled } from '../packaged-update-policy'
 import type { UpdateCheckOptions, UpdateStatus } from '../../../shared/update-status-types'
 import type {
   RemoteServerUpdateInstallResult,
@@ -16,7 +17,7 @@ export abstract class UpdaterRemoteStatus extends UpdaterNudge {
   }
 
   protected getRemoteServerUpdateSupport(): RemoteServerUpdateSupport {
-    if (!app.isPackaged) {
+    if (!isPackagedUpdateEnabled()) {
       return {
         installMode: this.updateInstallMode,
         automatic: false,

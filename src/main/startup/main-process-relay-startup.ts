@@ -4,6 +4,7 @@ import { getProfileUserDataPath } from '../orca-profiles/profile-storage-paths'
 import type { OrcaRuntimeRpcServer } from '../runtime/rpc/server/runtime-rpc'
 import { DesktopRelayService } from '../runtime/mobile-cloud-relay/desktop-relay-service'
 import { createDesktopRelayServiceInstaller } from '../runtime/mobile-cloud-relay/desktop-relay-service-installer'
+import { getActiveSelfHostedRelayConfig } from '../runtime/mobile-cloud-relay/self-hosted-relay-preferences'
 import { publishDesktopRelayStatus } from './main-process-relay-status'
 import { mainProcessState as state } from './main-process-state'
 
@@ -14,10 +15,12 @@ export function startDesktopRelayService(runtimeRpc: OrcaRuntimeRpcServer): void
     whenNetworkReady: state.initialProxyApplicationReady,
     isFenced: () => state.isQuitting,
     create: () => {
-      const cloudAuth = getOrcaCloudAuthConfig()
-      return cloudAuth.configured
+      const selfHosted = getActiveSelfHostedRelayConfig(getProfileUserDataPath())
+      const cloudAuth = selfHosted === undefined ? getOrcaCloudAuthConfig() : null
+      const authConfig = selfHosted ?? (cloudAuth?.configured ? cloudAuth.config : null)
+      return authConfig
         ? new DesktopRelayService({
-            authConfig: cloudAuth.config,
+            authConfig,
             userDataPath: getProfileUserDataPath(),
             appVersion: app.getVersion(),
             runtimeRpc,

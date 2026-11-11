@@ -6,6 +6,7 @@ import {
   MAX_CLOUD_TRANSCRIPTION_SECONDS,
   cloudTranscriptionTimeoutMs
 } from '../../shared/dictation-finish-deadlines'
+import { requireDirectProviderRequests } from '../network/direct-provider-requests'
 
 const MAX_CLOUD_AUDIO_SAMPLES = MAX_CLOUD_TRANSCRIPTION_SECONDS * CLOUD_TRANSCRIPTION_SAMPLE_RATE
 
@@ -73,6 +74,7 @@ export function postOpenAiTranscription(
   form: FormData,
   signal: AbortSignal
 ): Promise<Response> {
+  requireDirectProviderRequests()
   return getMainHttpClient().fetch(url, {
     method: 'POST',
     // Bearer auth only: keep the provider's cookies out of the shared desktop session.

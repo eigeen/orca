@@ -45,6 +45,8 @@ import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../shared/layout-owner-switch'
 import { repairDuplicatePtyPanesOnStart } from '../runtime/terminal/identity/moved-pane-owner-rekey'
 import { WslUsageReporter } from '../telemetry/wsl-usage-reporter'
 import { ALL_RPC_METHODS } from '../runtime/rpc/methods/rpc-method-registry'
+import { getProfileUserDataPath } from '../orca-profiles/profile-storage-paths'
+import { initializeSelfHostedRelayConfig } from '../runtime/mobile-cloud-relay/self-hosted-relay-preferences'
 import { startClaudeCodeThemeSync } from '../claude/theme-sync/claude-code-theme-sync-schedule'
 
 // Headless serve has no first window; timer fallback must still sweep trash.
@@ -59,6 +61,7 @@ export async function initializeReadyRuntimeServices(): Promise<void> {
   await refuseRealtimeSchedulingUnderZeroRtTime()
   // Load interrupted deletion records before listings so first paint shows Deleting.
   await loadWorktreeRemovalRecordsForStore(store)
+  await initializeSelfHostedRelayConfig(getProfileUserDataPath())
   initializeMainProcessObservers()
   initializeMainProcessAccountServices()
   const runtime = initializeMainProcessRuntime()

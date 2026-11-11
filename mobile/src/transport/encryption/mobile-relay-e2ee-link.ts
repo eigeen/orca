@@ -12,6 +12,7 @@ import { MobileE2EEV2PhysicalChannel } from './mobile-e2ee-v2-physical-channel'
 import { receiveBinaryAsBase64, websocketPayloadToUint8 } from './websocket-payload-bytes'
 import { relayConnectWebSocketUrl } from '../relay/mobile-relay-connect-url'
 import { WsInboundMessageQueue } from '../../../../src/shared/ws-inbound-message-queue'
+import { assertMobileRelayOrigin } from '../mobile-relay-origin-policy'
 
 // Native WebSockets normally emit close immediately after error or a relay-hello
 // refusal; bound the missing-close case so recovery is never left pending.
@@ -58,6 +59,7 @@ export class MobileRelayE2eeLink {
 
   constructor(options: MobileRelayE2eeLinkOptions) {
     this.options = options
+    assertMobileRelayOrigin(options.endpoint.cellUrl)
     this.socket = (options.createSocket ?? ((url) => receiveBinaryAsBase64(new WebSocket(url))))(
       relayConnectWebSocketUrl(options.endpoint.cellUrl, options.endpoint.relayHostId)
     )

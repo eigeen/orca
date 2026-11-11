@@ -49,4 +49,6 @@ export type GlobalSettingsBase = AntigravityChatAuthSettings &
   BrowserPasswordsGlobalSettings &
   NestedWorkerDepthSettings &
   AgentWorkspaceTrustSettings &
-  KeybindingGlobalSettings
+  KeybindingGlobalSettings & {
+    directQuotaQueriesEnabled?: boolean
+  }

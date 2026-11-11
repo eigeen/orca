@@ -49,8 +49,8 @@ export abstract class RateLimitServiceResultPolicy extends RateLimitServiceFetch
       }
     }
 
-    // Explicit unavailability clears stale usage, including removed settings.
-    if (fresh.status === 'unavailable') {
+    // Disabled or unavailable meters clear stale usage.
+    if (fresh.status === 'idle' || fresh.status === 'unavailable') {
       return fresh
     }
 

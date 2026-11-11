@@ -549,6 +549,21 @@
     "refreshingDetails": "Refreshing check details…"
   },
   "settings": {
+    "directQuotaQueries": {
+      "label": "Query provider quotas",
+      "description": "Allow the selected host to query providers directly using your account credentials."
+    },
+    "selfHostedRelay": {
+      "title": "Self-hosted Relay",
+      "address": "Relay HTTPS address",
+      "chooseAndSave": "Choose credential and save",
+      "useOfficial": "Use Orca Relay",
+      "restartRequired": "Restart Orca to apply Relay settings.",
+      "invalidOrigin": "Enter an HTTPS server address.",
+      "invalidCredential": "Select a valid Relay host token file.",
+      "saveFailed": "Could not save Relay settings. Try again.",
+      "restartFailed": "Could not restart Orca. Quit and reopen it to apply the setting."
+    },
     "chat": {
       "launch": {
         "on": "Chat UI is on",
@@ -12221,6 +12236,8 @@
           "unavailable": "Unavailable",
           "pathGroup": "How the phone reaches this computer",
           "anywhereTitle": "Orca Relay",
+          "selfHostedTitle": "Self-hosted Relay",
+          "selfHostedInvalid": "Check the Relay URL and token file configuration.",
           "anywhereDescription": "Phone can be on cellular or any Wi‑Fi. Sign-in required for Relay only.",
           "relayUnavailable": "Orca Relay isn’t available in this build. Use LAN.",
           "signIn": "Sign in for Relay",

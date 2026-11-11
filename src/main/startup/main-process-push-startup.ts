@@ -2,10 +2,15 @@ import { getOrcaPushGatewayUrl } from '../orca-profiles/profile-cloud-auth-confi
 import { DesktopPushService } from '../runtime/push/desktop-push-service'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import type { OrcaRuntimeRpcServer } from '../runtime/rpc/server/runtime-rpc'
+import { getProfileUserDataPath } from '../orca-profiles/profile-storage-paths'
+import { getActiveSelfHostedRelayConfig } from '../runtime/mobile-cloud-relay/self-hosted-relay-preferences'
 import { mainProcessState as state } from './main-process-state'
 
 // Push authenticates by host keypair, so accountless hosts must register phones too; shared startup state supplies the runtime in both modes.
 export function startDesktopPushService(runtimeRpc: OrcaRuntimeRpcServer): void {
+  if (getActiveSelfHostedRelayConfig(getProfileUserDataPath()) !== undefined) {
+    return
+  }
   const runtime: OrcaRuntimeService | null = state.runtime
   if (!runtime) {
     console.warn('[push] Background push startup skipped: runtime not started')

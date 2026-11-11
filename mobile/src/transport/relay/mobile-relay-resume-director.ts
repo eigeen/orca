@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { parseRetryAfterHeaderMs } from '../../../../src/shared/retry-after-header'
 import { MOBILE_RELAY_RETRY_AFTER_MAX_MS } from './mobile-relay-retry-delays'
 import type { MobileRelayEndpoint } from '../../../../src/shared/remote-runtime/relay/mobile-relay-credential-contract'
+import { assertMobileRelayOrigin } from '../mobile-relay-origin-policy'
 
 const MAX_RESPONSE_BYTES = 16 * 1024
 
@@ -40,9 +41,11 @@ export async function resolveMobileRelayEndpoint(args: {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), args.timeoutMs ?? 5000)
   try {
+    assertMobileRelayOrigin(args.relay.directorUrl)
     const url = new URL('/v1/resolve', args.relay.directorUrl)
     const response = await (args.fetchImpl ?? fetch)(url.toString(), {
       method: 'POST',
+      redirect: 'error',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         v: 1,
@@ -69,6 +72,7 @@ export async function resolveMobileRelayEndpoint(args: {
       throw new Error('relay director resolve response too large')
     }
     const resolved = ResolveResponseSchema.parse(JSON.parse(raw) as unknown)
+    assertMobileRelayOrigin(resolved.cellUrl)
     return {
       ...args.relay,
       cellUrl: resolved.cellUrl,

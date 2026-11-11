@@ -25,11 +25,13 @@ import {
   getAccountsLocationSearchEntries,
   getAccountsMiniMaxSearchEntries,
   getAccountsOpencodeSearchEntries,
-  getAccountsZcodePlanSearchEntries
+  getAccountsZcodePlanSearchEntries,
+  getDirectQuotaQuerySearchEntry
 } from './accounts-search'
 import { getRemoteAccountsPaneScope } from '../../provider-accounts/provider-account-scope'
 import { ProviderHostScopeControl } from '../../provider-accounts/ProviderHostScopeControl'
 import { SettingsSectionStack } from '../section-layout/SettingsSectionStack'
+import { SettingsSwitchRow } from '../form-controls/SettingsFormControls'
 import { matchesSettingsSearch } from '../search/settings-search'
 import { getCodexAccountAuthWarning } from './codex/codex-account-auth-warning'
 import { getCodexConfigSyncWarning } from './codex/codex-config-sync-warning'
@@ -320,6 +322,22 @@ export function AccountsPane({
     recordOpenCodeSettingEdit
   }
   const visibleSections = [
+    (!isRemoteAccountScope ||
+      typeof usageHostSettings.settings?.directQuotaQueriesEnabled === 'boolean') &&
+    matchesSettingsSearch(searchQuery, getDirectQuotaQuerySearchEntry()) ? (
+      <SettingsSwitchRow
+        key="direct-quota-queries"
+        label={getDirectQuotaQuerySearchEntry().title}
+        description={getDirectQuotaQuerySearchEntry().description}
+        checked={usageHostSettings.settings?.directQuotaQueriesEnabled === true}
+        onChange={() =>
+          void usageHostSettings.update({
+            directQuotaQueriesEnabled:
+              usageHostSettings.settings?.directQuotaQueriesEnabled !== true
+          })
+        }
+      />
+    ) : null,
     !searchQuery || /opencode|devin|account/i.test(searchQuery) ? (
       <div key={accountOwnerKey} className="space-y-8">
         <ManagedDataAccountsSection provider="opencode" target={accountOwner} />

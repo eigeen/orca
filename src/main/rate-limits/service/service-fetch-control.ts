@@ -1,6 +1,11 @@
 import { RateLimitServiceState } from './service-state'
+import type { DirectQuotaQueryOptions } from '../direct-quota-query-options'
 
 export abstract class RateLimitServiceFetchControl extends RateLimitServiceState {
+  protected directQuotaQueryOptions(signal: AbortSignal): DirectQuotaQueryOptions {
+    return this.directQuotaQueriesEnabled() ? { allowDirectQuotaQueries: true, signal } : { signal }
+  }
+
   protected waitForFetchIdle(): Promise<void> {
     if (
       !this.isFetching &&

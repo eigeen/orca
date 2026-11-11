@@ -1,4 +1,5 @@
 import type { ProviderRateLimits } from '../../../../shared/rate-limit-types'
+import { disabledUsageSnapshot } from '../../service/disabled-usage-snapshot'
 import {
   getClaudeProfileRouter,
   getClaudeWslProfileRouter
@@ -21,11 +22,14 @@ export async function fetchInactiveClaudeAccountUsage(
   account: InactiveClaudeAccount,
   options: ClaudeManagedAccountUsageOptions = {}
 ): Promise<ProviderRateLimits> {
+  if (options.allowDirectQuotaQueries !== true) {
+    return disabledUsageSnapshot('claude')
+  }
   if (account.managedAuthRuntime !== 'wsl') {
     // Covered accounts share System Default usage and launch routing.
     const authPreparation = getClaudeProfileRouter()?.accountUsagePreparation(account.id)
     return authPreparation
-      ? fetchActiveClaudeRateLimits({ signal: options.signal, authPreparation })
+      ? fetchActiveClaudeRateLimits({ ...options, authPreparation })
       : signInAgain()
   }
   const distro = account.wslDistro
@@ -42,9 +46,7 @@ export async function fetchInactiveClaudeAccountUsage(
   const timeout = AbortSignal.timeout(INACTIVE_WSL_READ_TIMEOUT_MS)
   const read = router
     .accountUsagePreparation(distro, account.id)
-    .then((authPreparation) =>
-      fetchActiveClaudeRateLimits({ signal: options.signal, authPreparation })
-    )
+    .then((authPreparation) => fetchActiveClaudeRateLimits({ ...options, authPreparation }))
     .catch(() => claudeUsageUnavailable())
   return Promise.race([
     read,

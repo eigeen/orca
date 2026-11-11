@@ -60,6 +60,7 @@ import {
   ReserveLedgerWriter
 } from './assignment/reserve-placement/reserve-ledger-writer.js'
 import { ProcessQueuedByteBudget } from './connections/splice-forwarder.js'
+import type { Hono } from 'hono'
 
 // Malformed upgrade paths must return client errors; an uncaught listener URIError kills the process.
 function decodePathSegment(value: string): string | null {
@@ -141,6 +142,7 @@ export function createRelayServer(
     cellFlags?: () => AppliedControlFlags<CellFlags>
     // Runtime edge control (director/edge.json); absent, the edge runs on its boot config.
     edgeControl?: EdgeControl
+    registerSelfHostedAuth?: (app: Hono) => void
   } = {}
 ) {
   const cellIncarnation = options.cellIncarnation ?? randomUUID()
@@ -467,6 +469,7 @@ export function createRelayServer(
     : null
   reserveSweepTimer?.unref()
   const app = createRelayApp(config, {
+    registerSelfHostedAuth: options.registerSelfHostedAuth,
     store,
     assignments,
     drain: (graceMs, options) => sessions.drain(graceMs, options ?? {}),

@@ -24,10 +24,14 @@ import {
   type MobilePairingConnectionMode
 } from '../../../../../shared/remote-runtime/pairing/mobile-pairing-connection-mode'
 import type { MobileRelayMintFailure } from '../../../../../shared/remote-runtime/relay/mobile-relay-mint-failure'
-import { useMobilePairingConnectionMode } from '../../mobile/use-mobile-pairing-connection-mode'
+import {
+  selectMobileRelayAuthorized,
+  useMobilePairingConnectionMode
+} from '../../mobile/use-mobile-pairing-connection-mode'
 import { useMobilePairingAddressPreference } from '../../mobile/use-mobile-pairing-address-preference'
 import { usePairingOfferExpiry } from '../../mobile/use-pairing-offer-expiry'
 import { shouldOpenMobilePairingAddress } from './mobile-pane-search'
+import { SelfHostedRelaySettingsSection } from './SelfHostedRelaySettingsSection'
 
 export function MobilePane(): React.JSX.Element {
   const t = useTranslate()
@@ -46,7 +50,7 @@ export function MobilePane(): React.JSX.Element {
   const [refreshingNetworkInterfaces, setRefreshingNetworkInterfaces] = useState(false)
   const [codeCopied, setCodeCopied] = useState(false)
   const [deviceCountAtQr, setDeviceCountAtQr] = useState<number | null>(null)
-  const signedIn = useAppStore((state) => state.orcaProfileAuthStatus?.state === 'connected')
+  const signedIn = useAppStore(selectMobileRelayAuthorized)
   const settingsSearchQuery = useAppStore((state) => state.settingsSearchQuery)
   const [connectionMode, setConnectionMode] = useMobilePairingConnectionMode()
   const [rotateNextQr, setRotateNextQr] = useState(false)
@@ -348,6 +352,7 @@ export function MobilePane(): React.JSX.Element {
       <div data-settings-row="" className="py-4 empty:hidden">
         <MachineNameField id="mobile-machine-name" />
       </div>
+      <SelfHostedRelaySettingsSection />
 
       <div data-settings-row="" className="space-y-6 py-4">
         <MobilePairingSetupSection

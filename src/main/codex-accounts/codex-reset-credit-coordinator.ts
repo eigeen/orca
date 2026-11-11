@@ -1,4 +1,8 @@
 import { randomUUID } from 'node:crypto'
+import {
+  DIRECT_PROVIDER_REQUESTS_DISABLED,
+  DIRECT_PROVIDER_REQUESTS_ENABLED
+} from '../network/direct-provider-requests'
 import type {
   CodexManagedAccount,
   CodexManagedAccountSummary,
@@ -60,6 +64,9 @@ export class CodexResetCreditCoordinator {
     idempotencyKey: string,
     expectedScope: CodexResetCreditExpectedScope
   ): Promise<CodexResetCreditConsumeResult> {
+    if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+      return Promise.reject(new Error(DIRECT_PROVIDER_REQUESTS_DISABLED))
+    }
     if (this.ledger.error) {
       return Promise.reject(this.ledger.error)
     }

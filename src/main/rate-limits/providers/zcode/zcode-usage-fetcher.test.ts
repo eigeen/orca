@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
 import { fetchZcodeRateLimits } from './zcode-usage-fetcher'
 
 let dir: string
@@ -48,7 +49,7 @@ describe('fetchZcodeRateLimits', () => {
       provider: { zai: { options: { apiKey: 'other-account', baseURL: 'https://api.z.ai/v1' } } }
     })
 
-    const result = await fetchZcodeRateLimits({ configPath })
+    const result = await fetchZcodeRateLimits({ allowDirectQuotaQueries: true, configPath })
 
     expect(result.status).toBe('unavailable')
     expect(fetch).not.toHaveBeenCalled()
@@ -59,6 +60,7 @@ describe('fetchZcodeRateLimits', () => {
     vi.mocked(fetch).mockResolvedValue(new Response('{}'))
 
     const result = await fetchZcodeRateLimits({
+      allowDirectQuotaQueries: true,
       configPath,
       planCredential: { apiKey: 'bad\r\nkey', baseUrl: 'https://api.z.ai' }
     })
@@ -80,7 +82,7 @@ describe('quota credential privacy', () => {
         new Response(JSON.stringify({ success: false, msg: 'Rejected test-secret' }))
       )
     }
-    const result = await fetchZcodeRateLimits({ configPath })
+    const result = await fetchZcodeRateLimits({ allowDirectQuotaQueries: true, configPath })
     expect(result.error).toBe('Rejected [redacted]')
     expect(JSON.stringify(result)).not.toContain('test-secret')
   })

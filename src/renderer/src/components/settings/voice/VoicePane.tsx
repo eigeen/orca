@@ -132,6 +132,8 @@ export function VoicePane({ settings, updateSettings }: VoicePaneProps): React.J
   }
 
   const selectedModel = catalog.find((m) => m.id === voiceSettings.sttModel)
+  const showOpenAiSettingsRow =
+    voiceSettings.openAiApiKeyConfigured && catalog.some((model) => model.provider === 'openai')
 
   const compatibleModel = catalog.find((m) => m.provider === 'openai-compatible')
   const compatibleConfigured =
@@ -298,7 +300,7 @@ export function VoicePane({ settings, updateSettings }: VoicePaneProps): React.J
             onRefreshModelStates={refreshModelStates}
             cloudSettings={
               <>
-                {voiceSettings.openAiApiKeyConfigured ? (
+                {showOpenAiSettingsRow ? (
                   <>
                     <UnsealedCredentialNotice
                       protection={openAiKeyProtection}

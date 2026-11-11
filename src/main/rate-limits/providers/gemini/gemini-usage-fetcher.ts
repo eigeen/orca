@@ -3,6 +3,9 @@ import type {
   ProviderRateLimits,
   UsageRateLimitFailureKind
 } from '../../../../shared/rate-limit-types'
+import type { DirectQuotaQueryOptions } from '../../direct-quota-query-options'
+import { abortSignalWithTimeout } from '../../../lib/abort-signal-with-timeout'
+import { disabledUsageSnapshot } from '../../service/disabled-usage-snapshot'
 import {
   loadProjectId,
   readAuthJson,
@@ -57,17 +60,17 @@ function geminiError(err: unknown, failureKind?: UsageRateLimitFailureKind): Pro
   }
 }
 
-async function fetchQuota(accessToken: string, projectId: string): Promise<ProviderRateLimits> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => {
-    controller.abort()
-  }, API_TIMEOUT_MS)
+async function fetchQuota(
+  accessToken: string,
+  projectId: string,
+  signal?: AbortSignal
+): Promise<ProviderRateLimits> {
   try {
     const res = await getMainHttpClient().fetch(RETRIEVE_QUOTA_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
       body: JSON.stringify({ project: projectId }),
-      signal: controller.signal
+      signal: abortSignalWithTimeout(signal, API_TIMEOUT_MS)
     })
     if (!res.ok) {
       return {
@@ -94,19 +97,17 @@ async function fetchQuota(accessToken: string, projectId: string): Promise<Provi
     }
   } catch (err) {
     return geminiError(err, classifyThrownUsageRequestError(err))
-  } finally {
-    clearTimeout(timeout)
   }
 }
 
 async function fetchViaAuthJson(
   auth: GoogleAuthEntry,
-  geminiCliOAuthEnabled = false
+  signal?: AbortSignal
 ): Promise<ProviderRateLimits> {
   let accessToken = auth.access
   const refreshToken = (auth.refresh || '').split('|')[0] ?? ''
   if (auth.expires < Date.now() || !accessToken) {
-    const refreshResult = await tryRefreshTokenFromBundle(refreshToken, geminiCliOAuthEnabled)
+    const refreshResult = await tryRefreshTokenFromBundle(refreshToken, true, signal)
     if (!refreshResult?.accessToken) {
       return {
         provider: 'gemini',
@@ -121,7 +122,7 @@ async function fetchViaAuthJson(
   }
   let effectiveProjectId = ''
   try {
-    effectiveProjectId = await loadProjectId(accessToken)
+    effectiveProjectId = await loadProjectId(accessToken, signal)
   } catch {
     effectiveProjectId =
       (auth.refresh || '').split('|')[1] || (auth.refresh || '').split('|')[2] || ''
@@ -136,14 +137,14 @@ async function fetchViaAuthJson(
       status: 'error'
     }
   }
-  const result = await fetchQuota(accessToken, effectiveProjectId)
+  const result = await fetchQuota(accessToken, effectiveProjectId, signal)
   if (result.status === 'error' && result.error?.includes('401')) {
-    const refreshResult = await tryRefreshTokenFromBundle(refreshToken, geminiCliOAuthEnabled)
+    const refreshResult = await tryRefreshTokenFromBundle(refreshToken, true, signal)
     if (refreshResult?.accessToken) {
-      const newProjectId = await loadProjectId(refreshResult.accessToken).catch(() => {
+      const newProjectId = await loadProjectId(refreshResult.accessToken, signal).catch(() => {
         return effectiveProjectId
       })
-      return fetchQuota(refreshResult.accessToken, newProjectId)
+      return fetchQuota(refreshResult.accessToken, newProjectId, signal)
     }
   }
   return result
@@ -151,15 +152,12 @@ async function fetchViaAuthJson(
 
 async function fetchViaOauthCreds(
   creds: GeminiCredentials,
-  geminiCliOAuthEnabled = false
+  signal?: AbortSignal
 ): Promise<ProviderRateLimits> {
   let accessToken = creds.access_token
   let currentCreds = creds
   if (creds.expiry_date < Date.now()) {
-    const refreshResult = await tryRefreshTokenFromBundle(
-      creds.refresh_token,
-      geminiCliOAuthEnabled
-    )
+    const refreshResult = await tryRefreshTokenFromBundle(creds.refresh_token, true, signal)
     if (!refreshResult?.accessToken) {
       return {
         provider: 'gemini',
@@ -178,9 +176,10 @@ async function fetchViaOauthCreds(
         ? Date.now() + refreshResult.expiresIn * 1000
         : creds.expiry_date
     }
+    signal?.throwIfAborted()
     await saveGeminiCredentials(currentCreds)
   }
-  const projectId = await loadProjectId(accessToken).catch(() => {
+  const projectId = await loadProjectId(accessToken, signal).catch(() => {
     return ''
   })
   if (!projectId) {
@@ -193,17 +192,15 @@ async function fetchViaOauthCreds(
       status: 'error'
     }
   }
-  const result = await fetchQuota(accessToken, projectId)
+  const result = await fetchQuota(accessToken, projectId, signal)
   if (result.status === 'error' && result.error?.includes('401')) {
-    const refreshResult = await tryRefreshTokenFromBundle(
-      currentCreds.refresh_token,
-      geminiCliOAuthEnabled
-    )
+    const refreshResult = await tryRefreshTokenFromBundle(currentCreds.refresh_token, true, signal)
     if (refreshResult?.accessToken) {
-      const newProjectId = await loadProjectId(refreshResult.accessToken).catch(() => {
+      const newProjectId = await loadProjectId(refreshResult.accessToken, signal).catch(() => {
         return ''
       })
       if (newProjectId) {
+        signal?.throwIfAborted()
         await saveGeminiCredentials({
           ...currentCreds,
           access_token: refreshResult.accessToken,
@@ -211,7 +208,7 @@ async function fetchViaOauthCreds(
             ? Date.now() + refreshResult.expiresIn * 1000
             : currentCreds.expiry_date
         })
-        return fetchQuota(refreshResult.accessToken, newProjectId)
+        return fetchQuota(refreshResult.accessToken, newProjectId, signal)
       }
     }
   }
@@ -219,8 +216,12 @@ async function fetchViaOauthCreds(
 }
 
 export async function fetchGeminiRateLimits(
-  geminiCliOAuthEnabled = false
+  geminiCliOAuthEnabled = false,
+  options: DirectQuotaQueryOptions = {}
 ): Promise<ProviderRateLimits> {
+  if (options.allowDirectQuotaQueries !== true || options.signal?.aborted) {
+    return disabledUsageSnapshot('gemini')
+  }
   if (!geminiCliOAuthEnabled) {
     // OAuth sources include other apps' macOS folders; background polling requires user opt-in.
     return {
@@ -237,7 +238,7 @@ export async function fetchGeminiRateLimits(
     const authJson = await readAuthJson()
     const result =
       authJson?.google?.type === 'oauth'
-        ? await fetchViaAuthJson(authJson.google, geminiCliOAuthEnabled)
+        ? await fetchViaAuthJson(authJson.google, options.signal)
         : await (async () => {
             const creds = await readGeminiCredentials()
             return !creds
@@ -249,7 +250,7 @@ export async function fetchGeminiRateLimits(
                   error: 'Gemini CLI credentials not found',
                   status: 'unavailable'
                 } as ProviderRateLimits)
-              : await fetchViaOauthCreds(creds, geminiCliOAuthEnabled)
+              : await fetchViaOauthCreds(creds, options.signal)
           })()
     return result
   } catch (err) {

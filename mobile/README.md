@@ -71,6 +71,10 @@ job reports in its summary whether the PR changes them, which means dev clients 
 
 ## Pair With Desktop Orca
 
+For a custom Relay, scan a QR from a [self-hosted desktop](../cloud/docs/self-hosted-relay.md).
+The QR supplies the Relay origin per host. Set `EXPO_PUBLIC_ORCA_RELAY_ORIGIN` at bundle time
+to restrict this build's Relay connections to one HTTPS origin.
+
 1. Open Orca desktop.
 2. Go to Settings > Mobile.
 3. Scan the pairing QR code from the mobile app.

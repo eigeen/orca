@@ -1,5 +1,8 @@
 import type { ProviderRateLimits } from '../../../../shared/rate-limit-types'
 import type { MiniMaxEndpoint } from '../../../../shared/global-settings-types'
+import type { DirectQuotaQueryOptions } from '../../direct-quota-query-options'
+import { abortSignalWithTimeout } from '../../../lib/abort-signal-with-timeout'
+import { disabledUsageSnapshot } from '../../service/disabled-usage-snapshot'
 import {
   extractMiniMaxCookieValue,
   fetchMiniMaxWithApiKey,
@@ -22,7 +25,7 @@ import {
 
 const API_TIMEOUT_MS = 15_000
 
-export type FetchMiniMaxRateLimitsOptions = {
+export type FetchMiniMaxRateLimitsOptions = DirectQuotaQueryOptions & {
   cookie?: string
   groupId?: string | null
   models?: MiniMaxModelList
@@ -41,6 +44,7 @@ async function fetchMiniMaxResponseWithCookie(args: {
   try {
     return await fetchMiniMaxWithSessionCookieJar(args)
   } catch (sessionFetchError) {
+    args.signal.throwIfAborted()
     const message =
       sessionFetchError instanceof Error ? sessionFetchError.message : String(sessionFetchError)
     console.warn(
@@ -58,6 +62,9 @@ async function fetchMiniMaxResponseWithCookie(args: {
 export async function fetchMiniMaxRateLimits(
   options: FetchMiniMaxRateLimitsOptions
 ): Promise<ProviderRateLimits> {
+  if (options.allowDirectQuotaQueries !== true || options.signal?.aborted) {
+    return disabledUsageSnapshot('minimax')
+  }
   const rawCookie = options.cookie?.trim() ?? ''
   const rawApiKey = options.apiKey?.trim() ?? ''
   const endpointMode: MiniMaxEndpoint = options.endpointMode ?? 'overseas'
@@ -69,7 +76,8 @@ export async function fetchMiniMaxRateLimits(
     return await fetchMiniMaxWithApiKeyFlow({
       apiKey: rawApiKey,
       endpoint,
-      models: options.models
+      models: options.models,
+      signal: options.signal
     })
   }
 
@@ -91,7 +99,7 @@ export async function fetchMiniMaxRateLimits(
       endpoint,
       groupId,
       endpointMode,
-      signal: AbortSignal.timeout(API_TIMEOUT_MS)
+      signal: abortSignalWithTimeout(options.signal, API_TIMEOUT_MS)
     })
     return await parseMiniMaxUsageResponse(fetchResult, options.models)
   } catch (error) {
@@ -104,12 +112,13 @@ async function fetchMiniMaxWithApiKeyFlow(args: {
   apiKey: string
   endpoint: string
   models: MiniMaxModelList
+  signal?: AbortSignal
 }): Promise<ProviderRateLimits> {
   try {
     const fetchResult = await fetchMiniMaxWithApiKey({
       apiKey: args.apiKey,
       endpoint: args.endpoint,
-      signal: AbortSignal.timeout(MINIMAX_API_KEY_TIMEOUT_MS)
+      signal: abortSignalWithTimeout(args.signal, MINIMAX_API_KEY_TIMEOUT_MS)
     })
     return await parseMiniMaxUsageResponse(fetchResult, args.models)
   } catch (error) {

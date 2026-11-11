@@ -37,6 +37,21 @@
     "refreshingDetails": "正在刷新检查详情…"
   },
   "settings": {
+    "directQuotaQueries": {
+      "label": "查询服务商额度",
+      "description": "允许所选主机使用你的账户凭据，直接向服务商查询额度。"
+    },
+    "selfHostedRelay": {
+      "title": "自建 Relay",
+      "address": "Relay HTTPS 地址",
+      "chooseAndSave": "选择凭据并保存",
+      "useOfficial": "使用官方 Relay",
+      "restartRequired": "重启 Orca 以应用 Relay 设置。",
+      "invalidOrigin": "请输入 HTTPS 服务器地址。",
+      "invalidCredential": "请选择有效的 Relay 主机凭据文件。",
+      "saveFailed": "无法保存 Relay 设置，请重试。",
+      "restartFailed": "无法重启 Orca。请退出并重新打开以应用设置。"
+    },
     "chat": {
       "permissionsAgentsLink": "设置 → 智能体",
       "permissionsTitle": "新聊天的权限",
@@ -11126,6 +11141,8 @@
           "localDescription": "手机必须连接此 Wi‑Fi 或通过 Tailscale。无需账号。",
           "pathGroup": "手机访问此电脑的方式",
           "anywhereTitle": "Orca Relay",
+          "selfHostedTitle": "自建 Relay",
+          "selfHostedInvalid": "请检查 Relay 地址和凭据文件配置。",
           "anywhereDescription": "手机可通过蜂窝网络或任意 Wi‑Fi 连接。仅 Relay 需要登录。",
           "relayUnavailable": "此版本不支持 Orca Relay。请使用局域网。",
           "signInAgain": "重新登录以使用 Relay",

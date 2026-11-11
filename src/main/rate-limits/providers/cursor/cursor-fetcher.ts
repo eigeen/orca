@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto'
 import { getMainHttpClient } from '../../../network/http-client'
 import type { ProviderRateLimits, UsageRateLimitSource } from '../../../../shared/rate-limit-types'
 import { abortSignalWithTimeout } from '../../../lib/abort-signal-with-timeout'
+import type { DirectQuotaQueryOptions } from '../../direct-quota-query-options'
+import { disabledUsageSnapshot } from '../../service/disabled-usage-snapshot'
 import {
   readCursorAuthSession,
   type CursorAuthReadResult,
@@ -210,8 +212,11 @@ function credentialFailure(readResult: CursorAuthReadResult): ProviderRateLimits
 
 /** Read Cursor allowance without running login or writing credentials. */
 export async function fetchCursorRateLimits(
-  options: { signal?: AbortSignal; authReadResult?: CursorAuthReadResult } = {}
+  options: DirectQuotaQueryOptions & { authReadResult?: CursorAuthReadResult } = {}
 ): Promise<ProviderRateLimits> {
+  if (options.allowDirectQuotaQueries !== true || options.signal?.aborted) {
+    return disabledUsageSnapshot('cursor')
+  }
   const readResult = options.authReadResult ?? (await readCursorAuthSession())
   const failure = credentialFailure(readResult)
   if (failure || readResult.status !== 'ok') {

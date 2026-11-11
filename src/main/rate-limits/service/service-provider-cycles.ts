@@ -41,7 +41,7 @@ export abstract class RateLimitServiceProviderCycles extends RateLimitServiceFul
         : fetchCodexRateLimits({
             codexHomePath,
             networkProxySettings: this.networkProxySettingsResolver?.(),
-            signal
+            ...this.directQuotaQueryOptions(signal)
           })
     ).catch((err): ProviderRateLimits => ({
       provider: 'codex',
@@ -110,7 +110,7 @@ export abstract class RateLimitServiceProviderCycles extends RateLimitServiceFul
       allowPtyFallback: this.shouldAllowClaudePtyFallback(claudeAuthPreparation),
       allowUsagePanelSupplement: this.shouldAllowClaudeUsagePanelSupplement(),
       networkProxySettings: this.networkProxySettingsResolver?.(),
-      signal
+      ...this.directQuotaQueryOptions(signal)
     }).catch((err): ProviderRateLimits => ({
       provider: 'claude',
       session: null,
@@ -159,7 +159,7 @@ export abstract class RateLimitServiceProviderCycles extends RateLimitServiceFul
     })
 
     const grok = await fetchGrokRateLimits({
-      signal,
+      ...this.directQuotaQueryOptions(signal),
       authReadResult: grokAuthReadResult
     }).catch((err): ProviderRateLimits => ({
       provider: 'grok',

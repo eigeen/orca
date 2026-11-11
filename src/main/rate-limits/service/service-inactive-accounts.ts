@@ -46,7 +46,7 @@ export abstract class RateLimitServiceInactiveAccounts extends RateLimitServiceP
           const fresh = await fetchInactiveClaudeAccountUsage(account, {
             allowUsagePanelSupplement: this.shouldAllowClaudeUsagePanelSupplement(),
             networkProxySettings: this.networkProxySettingsResolver?.(),
-            signal
+            ...this.directQuotaQueryOptions(signal)
           })
           if (
             signal.aborted ||
@@ -144,7 +144,7 @@ export abstract class RateLimitServiceInactiveAccounts extends RateLimitServiceP
           const fresh = await fetchCodexRateLimits({
             codexHomePath: home.managedHomePath,
             networkProxySettings: this.networkProxySettingsResolver?.(),
-            signal
+            ...this.directQuotaQueryOptions(signal)
           })
           if (
             signal.aborted ||

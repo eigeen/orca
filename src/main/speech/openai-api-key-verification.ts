@@ -1,5 +1,6 @@
 import { saveOpenAiSpeechApiKey } from './openai-api-key-store'
 import { OPENAI_TRANSCRIPTION_URL } from './cloud-transcription-target'
+import { requireDirectProviderRequests } from '../network/direct-provider-requests'
 import {
   openAiCompatibleTranscriptionUrl,
   resolveOpenAiCompatibleSpeechProviderInput,
@@ -16,6 +17,7 @@ const KEY_CHECK_TIMEOUT_MS = 10_000
 
 /** Refuses keys OpenAI rejects for transcription; offline or other failures still save, as before. */
 export async function saveVerifiedOpenAiSpeechApiKey(apiKey: string): Promise<void> {
+  requireDirectProviderRequests()
   const trimmed = apiKey.trim()
   if (trimmed) {
     await rejectUnauthorizedKey(OPENAI_TRANSCRIPTION_URL, trimmed, 'OpenAI')
@@ -27,6 +29,7 @@ export async function saveVerifiedOpenAiSpeechApiKey(apiKey: string): Promise<vo
 export async function saveVerifiedOpenAiCompatibleSpeechProvider(
   input: OpenAiCompatibleSpeechProvider
 ): Promise<void> {
+  requireDirectProviderRequests()
   const provider = resolveOpenAiCompatibleSpeechProviderInput(input)
   const url = openAiCompatibleTranscriptionUrl(provider.baseUrl)
   await rejectUnauthorizedKey(url, provider.apiKey, new URL(url).host)

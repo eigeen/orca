@@ -169,6 +169,7 @@ export class RelayOriginPool {
       // Migration targets must come from the configured director.
       let assignment = await requestRelayAssignment({
         directorUrl: this.options.directorUrl,
+        expectedCellOrigin: this.options.expectedCellOrigin,
         relayToken: this.relayJwt,
         relayHostId: this.options.relayHostId,
         reconnect: true,

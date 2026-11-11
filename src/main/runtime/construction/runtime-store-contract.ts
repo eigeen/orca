@@ -170,6 +170,7 @@ export type RuntimeStore = {
     minimaxUsageModels?: GlobalSettings['minimaxUsageModels']
     minimaxEndpoint?: GlobalSettings['minimaxEndpoint']
     zcodePlanSite?: GlobalSettings['zcodePlanSite']
+    directQuotaQueriesEnabled?: GlobalSettings['directQuotaQueriesEnabled']
     prBotAuthorOverrides?: GlobalSettings['prBotAuthorOverrides']
     sourceControlGroupOrder?: GlobalSettings['sourceControlGroupOrder']
     sourceControlCompareAgainstUpstream?: GlobalSettings['sourceControlCompareAgainstUpstream']

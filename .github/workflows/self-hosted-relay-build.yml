@@ -1,0 +1,108 @@
+name: Self-hosted Relay client builds
+
+on:
+  push:
+    branches: [dev/self-hosted-relay]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: self-hosted-relay-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - uses: pnpm/setup@v2
+        with:
+          install: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: ./.github/actions/install-mobile-dependencies
+      - name: Generate Android project
+        working-directory: mobile
+        run: pnpm exec expo prebuild --platform android --no-install
+      - name: Build APK
+        working-directory: mobile/android
+        env:
+          EXPO_PUBLIC_ORCA_RELAY_ORIGIN: ${{ vars.ORCA_ANDROID_RELAY_ORIGIN }}
+        run: |
+          if [ -z "$EXPO_PUBLIC_ORCA_RELAY_ORIGIN" ]; then
+            unset EXPO_PUBLIC_ORCA_RELAY_ORIGIN
+          fi
+          ./gradlew assembleRelease
+      - uses: actions/upload-artifact@v7
+        with:
+          name: orca-self-hosted-android
+          path: mobile/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  server-template:
+    uses: ./.github/workflows/qualified-orcad-template.yml
+    with:
+      ref: ${{ github.sha }}
+      fast_runners: false
+
+  windows:
+    needs: server-template
+    runs-on: windows-2022
+    timeout-minutes: 90
+    env:
+      ORCA_REQUIRE_ORCAD_TEMPLATE: '1'
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/setup@v2
+        with:
+          install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            mobile/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/install-mobile-dependencies
+      - run: pnpm build:release
+      - uses: actions/download-artifact@v8
+        with:
+          name: orcad-template
+          path: out/orcad-template
+      - name: Package Windows installer
+        shell: pwsh
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          node config/scripts/native-build/node-addons/ensure-native-runtime.mjs --runtime=electron
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $version = node -p "require('./package.json').version"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Keep the release's precedence so a managed SSH host admits this build.
+          $env:ORCA_LOCAL_BUILD_VERSION = "${version}+local.$env:GITHUB_RUN_NUMBER"
+          pnpm exec electron-builder --config config/electron-builder.config.cjs --win --publish never
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node -e "const { version } = JSON.parse(require('@electron/asar').extractFile('dist/win-unpacked/resources/app.asar', 'package.json')); if (version !== process.env.ORCA_LOCAL_BUILD_VERSION) throw new Error('Unexpected packaged version: ' + version)"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: orca-self-hosted-windows
+          path: dist/orca-windows-setup.exe
+          if-no-files-found: error
+          retention-days: 7

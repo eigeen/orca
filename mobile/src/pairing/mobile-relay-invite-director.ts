@@ -1,6 +1,7 @@
 import type { PairingRelay } from '../../../src/shared/remote-runtime/pairing/mobile-relay-pairing-offer'
 import { relayConnectWebSocketUrl } from '../transport/relay/mobile-relay-connect-url'
 import { RelayMovedSchema } from '../../../src/shared/remote-runtime/relay/mobile-relay-phone-protocol'
+import { assertMobileRelayOrigin } from '../transport/mobile-relay-origin-policy'
 
 export class RelayDirectorMoveNotNewerError extends Error {
   readonly cellUrl: string
@@ -23,11 +24,12 @@ export class RelayDirectorMoveNotNewerError extends Error {
   }
 }
 
-export function resolvePairingInviteThroughDirector(args: {
+export async function resolvePairingInviteThroughDirector(args: {
   relay: PairingRelay
   timeoutMs?: number
   createSocket?: (url: string) => WebSocket
 }): Promise<PairingRelay> {
+  assertMobileRelayOrigin(args.relay.directorUrl)
   const socket = (args.createSocket ?? ((url) => new WebSocket(url)))(
     relayConnectWebSocketUrl(args.relay.directorUrl, args.relay.relayHostId)
   )
@@ -62,6 +64,12 @@ export function resolvePairingInviteThroughDirector(args: {
       const moved = RelayMovedSchema.safeParse(value)
       if (!moved.success) {
         finish(new Error('invalid relay director move'))
+        return
+      }
+      try {
+        assertMobileRelayOrigin(moved.data.cellUrl)
+      } catch (error) {
+        finish(error as Error)
         return
       }
       if (moved.data.assignmentEpoch <= args.relay.assignmentEpoch) {

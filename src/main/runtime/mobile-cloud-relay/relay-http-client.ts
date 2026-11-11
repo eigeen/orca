@@ -101,6 +101,7 @@ function isAllowedRelayOrigin(value: string): boolean {
 
 export async function exchangeRelayAuthorization(input: {
   endpoint: string
+  rejectRedirect?: boolean
   accessToken: string
   keypair: E2EEKeypair
   fetch?: typeof globalThis.fetch
@@ -109,6 +110,7 @@ export async function exchangeRelayAuthorization(input: {
   const relayHostId = deriveRelayHostId(input.keypair.publicKey)
   const response = await (input.fetch ?? globalThis.fetch)(input.endpoint, {
     method: 'POST',
+    ...(input.rejectRedirect ? { redirect: 'error' as const } : {}),
     headers: {
       authorization: `Bearer ${input.accessToken}`,
       'content-type': 'application/json'
@@ -130,6 +132,7 @@ export async function exchangeRelayAuthorization(input: {
 
 type RelayAssignmentRequest = {
   directorUrl: string
+  expectedCellOrigin?: string
   relayToken: string
   relayHostId: string
   reconnect?: boolean
@@ -173,6 +176,7 @@ async function sendRelayAssignment(
   }
   const response = await (input.fetch ?? globalThis.fetch)(`${input.directorUrl}/v1/assign`, {
     method: 'POST',
+    ...(input.expectedCellOrigin ? { redirect: 'error' as const } : {}),
     headers: {
       authorization: `Bearer ${input.relayToken}`,
       'content-type': 'application/json'
@@ -204,7 +208,11 @@ async function sendRelayAssignment(
     throw new RelayHttpError('assignment', response.status, retryAfterMs)
   }
   const parsed = AssignmentResponseSchema.safeParse(await response.json())
-  if (!parsed.success || !isAllowedRelayOrigin(parsed.data.cellUrl)) {
+  if (
+    !parsed.success ||
+    !isAllowedRelayOrigin(parsed.data.cellUrl) ||
+    (input.expectedCellOrigin !== undefined && parsed.data.cellUrl !== input.expectedCellOrigin)
+  ) {
     throw new RelayHttpError('assignment', 502)
   }
   return parsed.data

@@ -244,6 +244,7 @@ export function buildDefaultSettings(args: {
     minimaxUsageModels: 'general',
     minimaxEndpoint: 'overseas',
     zcodePlanSite: 'zai',
+    directQuotaQueriesEnabled: false,
     geminiCliOAuthEnabled: false,
     agentCmdOverrides: {},
     // Arguments hold only the user's own text; the permission flag comes from the choice below.

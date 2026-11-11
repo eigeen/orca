@@ -13,6 +13,7 @@ import type { ConnectionLogSink } from '../diagnostics/connection/connection-log
 import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
 import { websocketPayloadToUint8 } from '../transport/encryption/websocket-payload-bytes'
 import { relayConnectWebSocketUrl } from '../transport/relay/mobile-relay-connect-url'
+import { assertMobileRelayOrigin } from '../transport/mobile-relay-origin-policy'
 import { WsInboundMessageQueue } from '../../../src/shared/ws-inbound-message-queue'
 
 import { RelayOuterError } from '../transport/encryption/mobile-relay-e2ee-link'
@@ -40,6 +41,7 @@ export function connectMobileRelayForPairing(args: {
   createSocket?: (url: string) => WebSocket
   onLog?: ConnectionLogSink
 }): PairingCandidateClient {
+  assertMobileRelayOrigin(args.relay.cellUrl)
   const requestTimeoutMs = args.requestTimeoutMs ?? 30_000
   const socketUrl = relayConnectWebSocketUrl(args.relay.cellUrl, args.relay.relayHostId)
   const log = createPairingRelayLogger(args.onLog)

@@ -80,6 +80,11 @@ export const mobileApi = {
   getRelayStatus: (): Promise<MobileRelayStatusDetail> =>
     ipcRenderer.invoke('mobile:getRelayStatus'),
 
+  relaySettings: {
+    get: () => ipcRenderer.invoke('mobile:getRelaySettings'),
+    save: (origin: string | null) => ipcRenderer.invoke('mobile:saveRelaySettings', origin)
+  },
+
   onRelayStatusChanged: (callback: (detail: MobileRelayStatusDetail) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, detail: MobileRelayStatusDetail) =>
       callback(detail)

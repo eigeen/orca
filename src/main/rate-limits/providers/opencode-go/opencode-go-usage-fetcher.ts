@@ -1,4 +1,6 @@
 import type { Session } from 'electron'
+import { abortSignalWithTimeout } from '../../../lib/abort-signal-with-timeout'
+import { disabledUsageSnapshot } from '../../service/disabled-usage-snapshot'
 import { randomUUID } from 'node:crypto'
 import type { NetworkProxySettings } from '../../../../shared/network-proxy'
 import type {
@@ -79,8 +81,12 @@ function parseWorkspaceIds(text: string): string[] {
 export async function fetchOpenCodeGoRateLimits(
   cookie: string,
   workspaceIdOverride?: string,
-  networkProxySettings?: NetworkProxySettings
+  networkProxySettings?: NetworkProxySettings,
+  signal?: AbortSignal
 ): Promise<ProviderRateLimits> {
+  if (signal?.aborted) {
+    return disabledUsageSnapshot('opencode-go')
+  }
   const normalizedCookie = normalizeCookieInput(cookie)
 
   if (!normalizedCookie) {
@@ -118,7 +124,7 @@ export async function fetchOpenCodeGoRateLimits(
   }
 
   try {
-    return await fetchOpenCodeGoRateLimitsWithSession(openCodeSession, workspaceIdOverride)
+    return await fetchOpenCodeGoRateLimitsWithSession(openCodeSession, workspaceIdOverride, signal)
   } finally {
     await clearOpenCodeSessionCookies(openCodeSession).catch((error: unknown) => {
       console.warn('[opencode-go] failed to clear session cookie jar after fetch', error)
@@ -126,7 +132,11 @@ export async function fetchOpenCodeGoRateLimits(
   }
 }
 
-function startOptionalBillingFetch(openCodeSession: Session, workspaceId: string) {
+function startOptionalBillingFetch(
+  openCodeSession: Session,
+  workspaceId: string,
+  signal?: AbortSignal
+) {
   const abortController = new AbortController()
   const promise = (async (): Promise<ExtraUsageBalance> => {
     const timeout = setTimeout(() => abortController.abort(), OPTIONAL_BILLING_TIMEOUT_MS)
@@ -139,7 +149,7 @@ function startOptionalBillingFetch(openCodeSession: Session, workspaceId: string
           Referer: `${OPENCODE_BASE_URL}/console/${workspaceId}/billing`,
           'x-org-id': workspaceId
         },
-        signal: abortController.signal
+        signal: signal ? AbortSignal.any([signal, abortController.signal]) : abortController.signal
       })
       if (!response.ok) {
         abortController.abort()
@@ -174,7 +184,8 @@ function makeOpenCodeError(
 
 async function fetchOpenCodeGoRateLimitsWithSession(
   openCodeSession: Session,
-  workspaceIdOverride?: string
+  workspaceIdOverride?: string,
+  signal?: AbortSignal
 ): Promise<ProviderRateLimits> {
   let ids: string[] = []
   const override = workspaceIdOverride?.trim()
@@ -200,7 +211,7 @@ async function fetchOpenCodeGoRateLimitsWithSession(
           Origin: OPENCODE_BASE_URL,
           Referer: OPENCODE_BASE_URL
         },
-        signal: AbortSignal.timeout(API_TIMEOUT_MS)
+        signal: abortSignalWithTimeout(signal, API_TIMEOUT_MS)
       })
 
       if (!workspacesRes.ok) {
@@ -225,6 +236,9 @@ async function fetchOpenCodeGoRateLimitsWithSession(
   let lastFailure: ProviderRateLimits | null = null
   let balanceOnlyResult: ProviderRateLimits | null = null
   for (const candidateId of ids) {
+    if (signal?.aborted) {
+      return disabledUsageSnapshot('opencode-go')
+    }
     let billingTask: ReturnType<typeof startOptionalBillingFetch> | null = null
     try {
       const statusPromise = openCodeSession.fetch(OPENCODE_GO_STATUS_URL, {
@@ -235,9 +249,9 @@ async function fetchOpenCodeGoRateLimitsWithSession(
           Referer: `${OPENCODE_BASE_URL}/console/${candidateId}/go`,
           'x-org-id': candidateId
         },
-        signal: AbortSignal.timeout(API_TIMEOUT_MS)
+        signal: abortSignalWithTimeout(signal, API_TIMEOUT_MS)
       })
-      billingTask = startOptionalBillingFetch(openCodeSession, candidateId)
+      billingTask = startOptionalBillingFetch(openCodeSession, candidateId, signal)
       const statusRes = await statusPromise
       if (!statusRes.ok) {
         billingTask.abort()

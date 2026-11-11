@@ -62,11 +62,12 @@ export abstract class RateLimitServiceFetchTargets extends RateLimitServiceResul
   }
 
   // WSL home resolution probes wsl.exe; chain it so other providers start immediately.
-  protected fetchKimiWithResolvedHome(): Promise<ProviderRateLimits> {
+  protected fetchKimiWithResolvedHome(signal: AbortSignal): Promise<ProviderRateLimits> {
+    const quotaQueryOptions = this.directQuotaQueryOptions(signal)
     const pendingHome = this.kimiHomeResolver?.()
     return pendingHome
-      ? pendingHome.then((home) => fetchKimiRateLimits({ home }))
-      : fetchKimiRateLimits({ home: undefined })
+      ? pendingHome.then((home) => fetchKimiRateLimits({ home, ...quotaQueryOptions }))
+      : fetchKimiRateLimits(quotaQueryOptions)
   }
 
   protected isSameCodexTarget(
@@ -134,7 +135,7 @@ export abstract class RateLimitServiceFetchTargets extends RateLimitServiceResul
         fresh = await fetchCodexRateLimits({
           codexHomePath,
           networkProxySettings: this.networkProxySettingsResolver?.(),
-          signal: controller.signal
+          ...this.directQuotaQueryOptions(controller.signal)
         })
       } catch (error) {
         fresh = {
