@@ -18,10 +18,7 @@ import {
 import { spawnProcessOnWorkerThread } from '../worker-thread-child-process/worker-thread-child-process'
 import { buildConfiguredProxyEnv } from '../../shared/network-proxy'
 import { getMainHttpClient } from '../network/http-client'
-import {
-  DIRECT_PROVIDER_REQUESTS_ENABLED,
-  requireDirectProviderRequests
-} from '../network/direct-provider-requests'
+import { requireDirectProviderRequests } from '../network/direct-provider-requests'
 import { probeCodexAuthPresence } from './codex-auth-presence'
 import {
   fetchCodexRateLimitsViaBackend,
@@ -30,10 +27,7 @@ import {
 import type { CodexRateLimitFetchOptions } from './codex-rate-limit-fetch-options'
 import { abortedCodexRateLimitResult } from './codex-rate-limit-fetch-result'
 import { terminateCodexProbeChild } from './codex-probe-termination'
-import {
-  consumeCodexRateLimitResetCreditFromBackend,
-  supplementCodexRateLimitResetCredits
-} from './codex-reset-credit-client'
+import { consumeCodexRateLimitResetCreditFromBackend } from './codex-reset-credit-client'
 import { readCodexRateLimitsViaRpc } from './codex-rpc-rate-limit-probe'
 import { getHiddenProbeWslCwdSetupCommands, resolveHiddenProbeCwd } from './hidden-probe-cwd'
 import { quotePosixShell } from '../../shared/shell/launch/shell-argument-quoting'
@@ -82,7 +76,7 @@ function processEnvWithoutCodexHome(): NodeJS.ProcessEnv {
 }
 
 async function requestCodexBackend(url: string, init: RequestInit): Promise<Response> {
-  requireDirectProviderRequests()
+  init.signal?.throwIfAborted()
   // Keep account authentication explicit; the desktop session may hold unrelated cookies.
   return getMainHttpClient().fetch(url, { ...init, credentials: 'omit' })
 }
@@ -131,11 +125,12 @@ async function supplementBackendMetadata(
   limits: ProviderRateLimits,
   options?: CodexRateLimitFetchOptions
 ): Promise<ProviderRateLimits> {
-  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
-    return { ...limits, rateLimitResetCredits: null }
-  }
-  const withSession = await supplementCodexSessionWindow(limits, requestCodexBackend, options)
-  return supplementCodexRateLimitResetCredits(withSession, requestCodexBackend, options)
+  const withSession =
+    options?.allowDirectQuotaQueries === true
+      ? await supplementCodexSessionWindow(limits, requestCodexBackend, options)
+      : limits
+  // The reset action is unavailable in this build, so don't advertise redeemable credits.
+  return { ...withSession, rateLimitResetCredits: null }
 }
 
 function codexUnavailable(error: string, status: 'error' | 'unavailable'): ProviderRateLimits {
@@ -152,7 +147,7 @@ function codexUnavailable(error: string, status: 'error' | 'unavailable'): Provi
 async function fetchBackendUsage(
   options: CodexRateLimitFetchOptions | undefined
 ): Promise<ProviderRateLimits | null> {
-  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+  if (options?.allowDirectQuotaQueries !== true) {
     return null
   }
   try {
@@ -160,9 +155,7 @@ async function fetchBackendUsage(
     if (options?.signal?.aborted) {
       return abortedCodexRateLimitResult()
     }
-    return result
-      ? supplementCodexRateLimitResetCredits(result, requestCodexBackend, options)
-      : null
+    return result ? { ...result, rateLimitResetCredits: null } : null
   } catch {
     return options?.signal?.aborted ? abortedCodexRateLimitResult() : null
   }

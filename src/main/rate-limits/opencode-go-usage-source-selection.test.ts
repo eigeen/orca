@@ -1,8 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../network/direct-provider-requests', () => ({
-  DIRECT_PROVIDER_REQUESTS_ENABLED: true
-}))
 import type { ProviderRateLimits } from '../../shared/rate-limit-types'
 import type { OpenCodeGoUsageWindows } from './opencode-go-status-parsing'
 import type * as usageFetcher from './opencode-go-usage-fetcher'
@@ -59,7 +56,11 @@ describe('fetchOpenCodeGoUsage', () => {
     fetchWithApiKeyMock.mockResolvedValue({ kind: 'ok', windows: WINDOWS })
     const onApiKeyResolved = vi.fn()
 
-    const result = await fetchOpenCodeGoUsage({ cookie: COOKIE, onApiKeyResolved })
+    const result = await fetchOpenCodeGoUsage({
+      allowDirectQuotaQueries: true,
+      cookie: COOKIE,
+      onApiKeyResolved
+    })
 
     expect(fetchWithCookieMock).not.toHaveBeenCalled()
     expect(onApiKeyResolved).toHaveBeenCalledWith({
@@ -78,7 +79,7 @@ describe('fetchOpenCodeGoUsage', () => {
   it('passes a manual override without evaluating selected execution context', async () => {
     resolveApiKeyMock.mockResolvedValue({ status: 'found', key: API_KEY, tier: 'settings' })
     fetchWithApiKeyMock.mockResolvedValue({ kind: 'ok', windows: WINDOWS })
-    const input = { cookie: '', settingsApiKey: API_KEY }
+    const input = { cookie: '', settingsApiKey: API_KEY, allowDirectQuotaQueries: true }
     Object.defineProperty(input, 'environment', {
       get: () => {
         throw new Error('Selected profile metadata is unreadable')
@@ -92,9 +93,9 @@ describe('fetchOpenCodeGoUsage', () => {
   it('propagates a rejected selected-account lookup without trying host or cookie credentials', async () => {
     resolveApiKeyMock.mockRejectedValue(new Error('Selected profile metadata is unreadable'))
 
-    await expect(fetchOpenCodeGoUsage({ cookie: COOKIE })).rejects.toThrow(
-      'Selected profile metadata is unreadable'
-    )
+    await expect(
+      fetchOpenCodeGoUsage({ allowDirectQuotaQueries: true, cookie: COOKIE })
+    ).rejects.toThrow('Selected profile metadata is unreadable')
     expect(fetchWithApiKeyMock).not.toHaveBeenCalled()
     expect(fetchWithCookieMock).not.toHaveBeenCalled()
   })
@@ -104,9 +105,9 @@ describe('fetchOpenCodeGoUsage', () => {
     fetchWithApiKeyMock.mockResolvedValue({ kind: 'no-subscription' })
     fetchWithCookieMock.mockResolvedValue(cookieResult('ok'))
 
-    const result = await fetchOpenCodeGoUsage({ cookie: COOKIE })
+    const result = await fetchOpenCodeGoUsage({ allowDirectQuotaQueries: true, cookie: COOKIE })
 
-    expect(fetchWithCookieMock).toHaveBeenCalledWith(COOKIE, undefined, undefined)
+    expect(fetchWithCookieMock).toHaveBeenCalledWith(COOKIE, undefined, undefined, undefined)
     expect(result.status).toBe('ok')
   })
 
@@ -115,7 +116,7 @@ describe('fetchOpenCodeGoUsage', () => {
     fetchWithApiKeyMock.mockResolvedValue({ kind: 'unauthorized' })
     fetchWithCookieMock.mockResolvedValue(cookieResult('error'))
 
-    const result = await fetchOpenCodeGoUsage({ cookie: COOKIE })
+    const result = await fetchOpenCodeGoUsage({ allowDirectQuotaQueries: true, cookie: COOKIE })
 
     expect(result.status).toBe('error')
     expect(result.usageMetadata?.failureKind).toBe('stale-token')
@@ -128,20 +129,21 @@ describe('fetchOpenCodeGoUsage', () => {
 
     const proxy = { httpProxyUrl: 'http://proxy.example:8080', httpProxyBypassRules: '' }
     const result = await fetchOpenCodeGoUsage({
+      allowDirectQuotaQueries: true,
       cookie: COOKIE,
       workspaceIdOverride: 'wrk_abc',
       networkProxySettings: proxy
     })
 
     expect(fetchWithApiKeyMock).not.toHaveBeenCalled()
-    expect(fetchWithCookieMock).toHaveBeenCalledWith(COOKIE, 'wrk_abc', proxy)
+    expect(fetchWithCookieMock).toHaveBeenCalledWith(COOKIE, 'wrk_abc', proxy, undefined)
     expect(result.status).toBe('ok')
   })
 
   it('reports an unreadable credential database instead of using an env key', async () => {
     resolveApiKeyMock.mockResolvedValue({ status: 'credential-database-unreadable' })
 
-    const result = await fetchOpenCodeGoUsage({ cookie: '   ' })
+    const result = await fetchOpenCodeGoUsage({ allowDirectQuotaQueries: true, cookie: '   ' })
 
     expect(fetchWithApiKeyMock).not.toHaveBeenCalled()
     expect(fetchWithCookieMock).not.toHaveBeenCalled()
@@ -154,7 +156,7 @@ describe('fetchOpenCodeGoUsage', () => {
     resolveApiKeyMock.mockResolvedValue({ status: 'credential-database-unreadable' })
     fetchWithCookieMock.mockResolvedValue(cookieResult('ok'))
 
-    const result = await fetchOpenCodeGoUsage({ cookie: COOKIE })
+    const result = await fetchOpenCodeGoUsage({ allowDirectQuotaQueries: true, cookie: COOKIE })
 
     expect(fetchWithApiKeyMock).not.toHaveBeenCalled()
     expect(result.status).toBe('ok')
@@ -163,7 +165,7 @@ describe('fetchOpenCodeGoUsage', () => {
   it('stays unavailable when neither a key nor a cookie is configured', async () => {
     resolveApiKeyMock.mockResolvedValue({ status: 'missing' })
 
-    const result = await fetchOpenCodeGoUsage({ cookie: '   ' })
+    const result = await fetchOpenCodeGoUsage({ allowDirectQuotaQueries: true, cookie: '   ' })
 
     expect(fetchWithCookieMock).not.toHaveBeenCalled()
     expect(result.status).toBe('unavailable')

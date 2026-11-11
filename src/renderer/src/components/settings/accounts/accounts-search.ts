@@ -4,6 +4,18 @@ import { translateSearchKeyword } from '../search/settings-search-keywords'
 import { createLocalizedCatalog } from '@/i18n/localized-catalog'
 import { getAccountsClaudeSearchEntries } from './accounts-claude-search'
 
+export const getDirectQuotaQuerySearchEntry = createLocalizedCatalog(() => ({
+  title: translate('settings.directQuotaQueries.label', 'Query provider quotas'),
+  description: translate(
+    'settings.directQuotaQueries.description',
+    'Allow the selected host to query providers directly using your account credentials.'
+  ),
+  keywords: [
+    ...translateSearchKeyword('auto.components.settings.accounts.search.c759741d77', 'quota'),
+    ...translateSearchKeyword('auto.components.settings.accounts.search.e949b08ffb', 'rate limit')
+  ]
+}))
+
 export const getAccountsLocationSearchEntries = createLocalizedCatalog(() => [
   {
     title: translate('auto.components.settings.accounts.search.d09fb5ca92', 'Account Location'),
@@ -277,6 +289,7 @@ export const getAccountsZcodePlanSearchEntries = createLocalizedCatalog(() => [
 ])
 
 export const getAccountsPaneSearchEntries = createLocalizedCatalog((): SettingsSearchEntry[] => [
+  getDirectQuotaQuerySearchEntry(),
   ...getAccountsLocationSearchEntries(),
   ...getAccountsClaudeSearchEntries(),
   ...getAccountsCodexSearchEntries(),

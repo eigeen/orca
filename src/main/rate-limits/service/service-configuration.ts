@@ -99,6 +99,23 @@ export abstract class RateLimitServiceConfiguration extends RateLimitServiceAcco
     this.networkProxySettingsResolver = resolver
   }
 
+  setDirectQuotaQueriesEnabledResolver(resolver: () => boolean): void {
+    this.directQuotaQueriesEnabled = resolver
+  }
+
+  async refreshAfterDirectQuotaSettingChange(): Promise<void> {
+    this.abortActiveFetchCycle()
+    this.clearQueuedFetches()
+    this.lastInactiveClaudeFetchAt = 0
+    if (!this.directQuotaQueriesEnabled()) {
+      this.inactiveClaudeCache.clear()
+      this.inactiveCodexCache.clear()
+      this.lastInactiveCodexFetchAt = 0
+    }
+    await this.waitForFetchIdle()
+    await this.refresh()
+  }
+
   setInactiveClaudeAccountsResolver(resolver: () => InactiveClaudeAccountInfo[]): void {
     this.inactiveClaudeAccountsResolver = resolver
     this.inactiveClaudeAccountsGeneration += 1

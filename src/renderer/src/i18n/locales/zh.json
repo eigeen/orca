@@ -31,6 +31,10 @@
     "refreshingDetails": "正在刷新检查详情…"
   },
   "settings": {
+    "directQuotaQueries": {
+      "label": "查询服务商额度",
+      "description": "允许所选主机使用你的账户凭据，直接向服务商查询额度。"
+    },
     "selfHostedRelay": {
       "title": "自建 Relay",
       "address": "Relay HTTPS 地址",

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import '@testing-library/jest-dom/vitest'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi, type Mock } from 'vitest'
 import { toast } from 'sonner'
 import { i18n } from '@/i18n/i18n'
 import { getDefaultSettings } from '../../../../../shared/constants'
@@ -13,6 +13,7 @@ import type { RuntimeClientTarget } from '../../../../../shared/runtime-client-t
 import { AccountsPane } from './AccountsPane'
 import type { SettingsHostScope } from '../host-scope/settings-host-scope'
 import type { SettingsNavigationTarget } from '@/lib/settings-navigation-types'
+import type * as RuntimeRpcCalls from '@/runtime/rpc/calls/runtime-rpc-call'
 
 // Why: focus deliberately points at another server; the pane must follow hostScope only.
 const focusedElsewhere = {
@@ -42,6 +43,16 @@ const fake = vi.hoisted(() => {
     rosters: Map<string, unknown>
     watchedTargets: unknown[]
     selects: unknown[][]
+    usageSettingsRpc: Mock<
+      (
+        target: RuntimeClientTarget,
+        method: string,
+        params?: unknown,
+        options?: unknown
+      ) => Promise<{
+        settings: { directQuotaQueriesEnabled?: boolean }
+      }>
+    >
   } = {
     query: 'claude',
     pendingSelect: null,
@@ -50,11 +61,22 @@ const fake = vi.hoisted(() => {
     navigate: () => {},
     rosters: new Map(),
     watchedTargets: [],
-    selects: []
+    selects: [],
+    usageSettingsRpc: vi.fn()
   }
   return state
 })
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() } }))
+vi.mock('@/runtime/rpc/calls/runtime-rpc-call', async (importOriginal) => {
+  const original = await importOriginal<typeof RuntimeRpcCalls>()
+  return {
+    ...original,
+    callRuntimeRpc: (...args: Parameters<typeof original.callRuntimeRpc>) =>
+      args[1] === 'settings.get' || args[1] === 'settings.update'
+        ? fake.usageSettingsRpc(...args)
+        : original.callRuntimeRpc(...args)
+  }
+})
 vi.mock('@/store/index', () => ({
   useAppStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({
@@ -159,6 +181,8 @@ beforeEach(async () => {
   fake.pendingSelect = null
   fake.watchedTargets = []
   fake.selects = []
+  fake.usageSettingsRpc.mockReset()
+  fake.usageSettingsRpc.mockResolvedValue({ settings: {} })
   fake.rosters.set('local', claudeRoster('acct-l', 'local@desktop.test', false))
   fake.rosters.set('server-a', claudeRoster('acct-a', 'alpha@server-a.test', false))
   fake.rosters.set('server-b', claudeRoster('acct-b', 'beta@server-b.test', false))
@@ -178,6 +202,35 @@ afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
   Reflect.deleteProperty(window, 'api')
+})
+
+it('toggles direct quota queries on the selected host', async () => {
+  fake.query = 'Query provider quotas'
+  fake.usageSettingsRpc.mockImplementation(async (target: RuntimeClientTarget, method: string) => ({
+    settings: {
+      directQuotaQueriesEnabled:
+        method === 'settings.update' &&
+        target.kind === 'environment' &&
+        target.environmentId === 'server-a'
+    }
+  }))
+  const view = render(renderPane(scopeFor('server-a')))
+  const toggle = await screen.findByRole('switch', { name: 'Query provider quotas' })
+  expect(toggle).not.toBeChecked()
+
+  await act(async () => {
+    fireEvent.click(toggle)
+  })
+  expect(toggle).toBeChecked()
+  expect(fake.usageSettingsRpc).toHaveBeenCalledWith(
+    { kind: 'environment', environmentId: 'server-a' },
+    'settings.update',
+    { directQuotaQueriesEnabled: true },
+    expect.anything()
+  )
+
+  await act(async () => view.rerender(renderPane(scopeFor('server-b'))))
+  expect(await screen.findByRole('switch', { name: 'Query provider quotas' })).not.toBeChecked()
 })
 
 it("drops a server's late account result after the page moves to another server", async () => {

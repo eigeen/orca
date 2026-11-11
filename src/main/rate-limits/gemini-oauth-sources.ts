@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import path from 'node:path'
 import { getMainHttpClient } from '../network/http-client'
+import { abortSignalWithTimeout } from '../lib/abort-signal-with-timeout'
 import { extractOAuthClientCredentials } from './gemini-cli-oauth-extractor'
 import { writeCredentialFileAtomic } from '../credentials/integration-credential-file'
 
@@ -92,7 +93,8 @@ export type RefreshTokenResult = {
 export async function refreshAccessToken(
   refreshToken: string,
   clientId: string,
-  clientSecret: string
+  clientSecret: string,
+  signal?: AbortSignal
 ): Promise<RefreshTokenResult> {
   const res = await getMainHttpClient().fetch(GOOGLE_TOKEN_URL, {
     method: 'POST',
@@ -103,7 +105,7 @@ export async function refreshAccessToken(
       refresh_token: refreshToken,
       grant_type: 'refresh_token'
     }).toString(),
-    signal: AbortSignal.timeout(API_TIMEOUT_MS)
+    signal: abortSignalWithTimeout(signal, API_TIMEOUT_MS)
   })
 
   if (!res.ok) {
@@ -122,7 +124,7 @@ export async function refreshAccessToken(
   }
 }
 
-export async function loadProjectId(accessToken: string): Promise<string> {
+export async function loadProjectId(accessToken: string, signal?: AbortSignal): Promise<string> {
   const res = await getMainHttpClient().fetch(LOAD_CODE_ASSIST_URL, {
     method: 'POST',
     headers: {
@@ -130,7 +132,7 @@ export async function loadProjectId(accessToken: string): Promise<string> {
       Authorization: `Bearer ${accessToken}`
     },
     body: JSON.stringify({ metadata: { ideType: 'GEMINI_CLI', pluginType: 'GEMINI' } }),
-    signal: AbortSignal.timeout(API_TIMEOUT_MS)
+    signal: abortSignalWithTimeout(signal, API_TIMEOUT_MS)
   })
 
   if (!res.ok) {
@@ -147,9 +149,10 @@ export async function loadProjectId(accessToken: string): Promise<string> {
 // A plain refresh token lets both credential-file formats share bundle extraction.
 export async function tryRefreshTokenFromBundle(
   refreshToken: string,
-  allowCliOAuth = true
+  allowCliOAuth = true,
+  signal?: AbortSignal
 ): Promise<RefreshTokenResult | null> {
-  if (!allowCliOAuth) {
+  if (!allowCliOAuth || signal?.aborted) {
     return null
   }
   const clientCreds = await extractOAuthClientCredentials()
@@ -157,5 +160,5 @@ export async function tryRefreshTokenFromBundle(
     return null
   }
 
-  return refreshAccessToken(refreshToken, clientCreds.clientId, clientCreds.clientSecret)
+  return refreshAccessToken(refreshToken, clientCreds.clientId, clientCreds.clientSecret, signal)
 }

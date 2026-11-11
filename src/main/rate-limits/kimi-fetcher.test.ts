@@ -1,9 +1,6 @@
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../network/direct-provider-requests', () => ({
-  DIRECT_PROVIDER_REQUESTS_ENABLED: true
-}))
 import { setMainHttpClient } from '../network/http-client'
 
 const fetchMock = vi.fn()
@@ -84,7 +81,7 @@ describe('fetchKimiRateLimits', () => {
   })
 
   it('returns unavailable when not signed in', async () => {
-    const result = await fetchKimiRateLimits()
+    const result = await fetchKimiRateLimits({ allowDirectQuotaQueries: true })
     expect(result.provider).toBe('kimi')
     expect(result.status).toBe('unavailable')
     expect(result.session).toBeNull()
@@ -96,7 +93,7 @@ describe('fetchKimiRateLimits', () => {
     fsState.credentials = freshCredentials()
     fetchMock.mockResolvedValueOnce(jsonResponse(USAGE_RESPONSE))
 
-    const result = await fetchKimiRateLimits()
+    const result = await fetchKimiRateLimits({ allowDirectQuotaQueries: true })
 
     expect(result.status).toBe('ok')
     expect(result.provider).toBe('kimi')
@@ -112,7 +109,7 @@ describe('fetchKimiRateLimits', () => {
     fsState.credentials = freshCredentials()
     fetchMock.mockRejectedValueOnce(new Error('net::ERR_PROXY_CONNECTION_FAILED'))
 
-    const result = await fetchKimiRateLimits()
+    const result = await fetchKimiRateLimits({ allowDirectQuotaQueries: true })
     expect(result.error).toBe('net::ERR_PROXY_CONNECTION_FAILED')
     expect(result.usageMetadata?.failureKind).toBe('network')
   })
@@ -123,14 +120,14 @@ describe('fetchKimiRateLimits', () => {
       new Response('not json', { status: 200, headers: { 'content-type': 'application/json' } })
     )
 
-    const result = await fetchKimiRateLimits()
+    const result = await fetchKimiRateLimits({ allowDirectQuotaQueries: true })
     expect(result.usageMetadata?.failureKind).toBe('parse')
   })
 
   it('surfaces an error when the credentials file cannot be parsed', async () => {
     fsState.credentials = '{'
 
-    const result = await fetchKimiRateLimits()
+    const result = await fetchKimiRateLimits({ allowDirectQuotaQueries: true })
     expect(result.status).toBe('error')
     expect(result.error).toMatch(/json/i)
     expect(fetchMock).not.toHaveBeenCalled()
@@ -140,7 +137,7 @@ describe('fetchKimiRateLimits', () => {
     fsState.credentials = freshCredentials()
     fsState.readError = new Error('EACCES')
 
-    const result = await fetchKimiRateLimits()
+    const result = await fetchKimiRateLimits({ allowDirectQuotaQueries: true })
     expect(result.status).toBe('error')
     expect(result.error).toMatch(/EACCES/)
     expect(fetchMock).not.toHaveBeenCalled()
@@ -150,7 +147,7 @@ describe('fetchKimiRateLimits', () => {
     fsState.credentials = freshCredentials()
     fetchMock.mockResolvedValueOnce(jsonResponse({}))
 
-    const result = await fetchKimiRateLimits()
+    const result = await fetchKimiRateLimits({ allowDirectQuotaQueries: true })
     expect(result.status).toBe('error')
     expect(result.error).toMatch(/quota windows/)
     expect(result.session).toBeNull()
@@ -160,7 +157,7 @@ describe('fetchKimiRateLimits', () => {
   it('does NOT refresh or call the API when the token is expired (read-only)', async () => {
     fsState.credentials = JSON.stringify({ access_token: 'tok-old', expires_at: 1 })
 
-    const result = await fetchKimiRateLimits()
+    const result = await fetchKimiRateLimits({ allowDirectQuotaQueries: true })
     expect(result.status).toBe('error')
     expect(result.error).toMatch(/expired/i)
     expect(result.error).toMatch(/run kimi on the computer running Orca/i)
@@ -176,7 +173,7 @@ describe('fetchKimiRateLimits', () => {
     fsState.credentials = freshCredentials()
     fetchMock.mockResolvedValueOnce(jsonResponse(USAGE_RESPONSE))
 
-    await fetchKimiRateLimits()
+    await fetchKimiRateLimits({ allowDirectQuotaQueries: true })
 
     expect(fsState.readPaths).toEqual(hostReadPaths('/home/test/.kimi-code'))
   })
@@ -196,7 +193,7 @@ describe('fetchKimiRateLimits', () => {
     fsState.credentials = freshCredentials()
     fetchMock.mockResolvedValueOnce(jsonResponse(USAGE_RESPONSE))
 
-    const result = await fetchKimiRateLimits()
+    const result = await fetchKimiRateLimits({ allowDirectQuotaQueries: true })
 
     expect(result.status).toBe('ok')
     expect(fsState.readPaths).toEqual(
@@ -210,7 +207,7 @@ describe('fetchKimiRateLimits', () => {
     fsState.credentials = freshCredentials()
     fetchMock.mockResolvedValueOnce(jsonResponse(USAGE_RESPONSE))
 
-    await fetchKimiRateLimits()
+    await fetchKimiRateLimits({ allowDirectQuotaQueries: true })
 
     expect(fsState.readPaths).toEqual(hostReadPaths('/home/test/.kimi-code'))
   })

@@ -1,5 +1,4 @@
 import type { ProviderRateLimits } from '../../shared/rate-limit-types'
-import { DIRECT_PROVIDER_REQUESTS_ENABLED } from '../network/direct-provider-requests'
 import { disabledUsageSnapshot } from './disabled-usage-snapshot'
 import {
   readClaudeOAuthCredentials,
@@ -17,7 +16,7 @@ import { CLAUDE_PROFILE_MISSING_MESSAGE } from '../../shared/claude-profile-rout
 export async function fetchActiveClaudeRateLimits(
   options?: ClaudeRateLimitFetchOptions
 ): Promise<ProviderRateLimits> {
-  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+  if (options?.allowDirectQuotaQueries !== true) {
     return disabledUsageSnapshot('claude')
   }
   const usageError = options?.authPreparation?.usageError
@@ -65,7 +64,7 @@ export async function fetchActiveClaudeRateLimits(
     )
   }
   try {
-    return await fetchClaudeOAuthUsage(credentials.token, options?.signal)
+    return await fetchClaudeOAuthUsage(credentials.token, options)
   } catch (error) {
     const { failureKind } = classifyClaudeOAuthUsageError(error)
     if (failureKind === 'stale-token' && !canClaudeRenewLogin(credentials, error)) {

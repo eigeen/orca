@@ -1,5 +1,5 @@
 import { getMainHttpClient } from '../network/http-client'
-import { DIRECT_PROVIDER_REQUESTS_ENABLED } from '../network/direct-provider-requests'
+import type { DirectQuotaQueryOptions } from './direct-quota-query-options'
 import type {
   ProviderRateLimits,
   RateLimitWindow,
@@ -281,9 +281,9 @@ async function fetchMonthlyUsageFallback(
 
 // Grok CLI owns login/refresh; Orca only reads its session file.
 export async function fetchGrokRateLimits(
-  options: { signal?: AbortSignal; authReadResult?: GrokAuthReadResult } = {}
+  options: DirectQuotaQueryOptions & { authReadResult?: GrokAuthReadResult } = {}
 ): Promise<ProviderRateLimits> {
-  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+  if (options.allowDirectQuotaQueries !== true || options.signal?.aborted) {
     return result('idle', null)
   }
   const readResult = options.authReadResult ?? readGrokAuthSession()

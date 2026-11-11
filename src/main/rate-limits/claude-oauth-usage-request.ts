@@ -1,7 +1,8 @@
 import type { ProviderRateLimits, RateLimitWindow } from '../../shared/rate-limit-types'
 import { ensureElectronProxyFromEnvironment } from '../network/proxy-settings'
 import { getMainHttpClient } from '../network/http-client'
-import { requireDirectProviderRequests } from '../network/direct-provider-requests'
+import { DIRECT_PROVIDER_REQUESTS_DISABLED } from '../network/direct-provider-requests'
+import type { DirectQuotaQueryOptions } from './direct-quota-query-options'
 import { abortSignalWithTimeout } from '../lib/abort-signal-with-timeout'
 import {
   ClaudeUsageRequestError,
@@ -67,9 +68,12 @@ function mapFableWeeklyWindow(data: OAuthUsageResponse): RateLimitWindow | null 
 
 export async function fetchClaudeOAuthUsage(
   token: string,
-  signal?: AbortSignal
+  options: DirectQuotaQueryOptions = {}
 ): Promise<ProviderRateLimits> {
-  requireDirectProviderRequests()
+  if (options.allowDirectQuotaQueries !== true) {
+    throw new Error(DIRECT_PROVIDER_REQUESTS_DISABLED)
+  }
+  const { signal } = options
   if (signal?.aborted) {
     return abortedClaudeRateLimitResult()
   }

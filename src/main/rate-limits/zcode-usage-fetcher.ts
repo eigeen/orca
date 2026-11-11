@@ -1,4 +1,4 @@
-import { DIRECT_PROVIDER_REQUESTS_ENABLED } from '../network/direct-provider-requests'
+import type { DirectQuotaQueryOptions } from './direct-quota-query-options'
 import { disabledUsageSnapshot } from './disabled-usage-snapshot'
 import {
   readZcodeUsageCredentials,
@@ -129,12 +129,12 @@ function asWindow(limit: QuotaLimit | undefined): RateLimitWindow | null {
 }
 
 export async function fetchZcodeRateLimits(
-  options: ZcodeUsageCredentialOptions & {
-    planCredential?: ZcodePlanCredential | null
-    signal?: AbortSignal
-  } = {}
+  options: ZcodeUsageCredentialOptions &
+    DirectQuotaQueryOptions & {
+      planCredential?: ZcodePlanCredential | null
+    } = {}
 ): Promise<ProviderRateLimits> {
-  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+  if (options.allowDirectQuotaQueries !== true || options.signal?.aborted) {
     return disabledUsageSnapshot('zcode')
   }
   const plan = options.planCredential

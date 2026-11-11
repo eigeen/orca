@@ -43,6 +43,9 @@ export function createProviderAccountServices(
   const agentView = getClaudeAgentViewService()
   void agentView.reconcile(store.getSettings())
   const rateLimits = new RateLimitService()
+  rateLimits.setDirectQuotaQueriesEnabledResolver(
+    () => store.getSettings().directQuotaQueriesEnabled === true
+  )
   const codexRuntimeHome = new CodexRuntimeHomeService(store)
   const codexAccounts = new CodexAccountService(
     store,
@@ -69,6 +72,13 @@ export function createProviderAccountServices(
   )
   store.onSettingsChanged((updates, settings) => {
     void agentView.reconcile(settings)
+    if ('directQuotaQueriesEnabled' in updates) {
+      void rateLimits
+        .refreshAfterDirectQuotaSettingChange()
+        .catch((error: unknown) =>
+          console.warn('[rate-limits] Failed to refresh after a quota setting change:', error)
+        )
+    }
     // Auto runtime selection remains live as provider settings change.
     void syncAccountRuntimeTargets(updates, settings).catch((error) =>
       console.warn('[rate-limits] Failed to apply account runtime target:', error)

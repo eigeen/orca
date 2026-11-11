@@ -1,7 +1,8 @@
 import { readFile } from 'node:fs/promises'
 import { join, win32 as pathWin32 } from 'node:path'
 import { getMainHttpClient } from '../network/http-client'
-import { DIRECT_PROVIDER_REQUESTS_ENABLED } from '../network/direct-provider-requests'
+import type { DirectQuotaQueryOptions } from './direct-quota-query-options'
+import { abortSignalWithTimeout } from '../lib/abort-signal-with-timeout'
 import { disabledUsageSnapshot } from './disabled-usage-snapshot'
 import type {
   ProviderRateLimits,
@@ -283,10 +284,10 @@ function result(
 /** Read usage from host/WSL credentials selected by home (#12370); config chooses credential slot and usage URL.
  * The CLI owns rotating refresh tokens: never refresh/write its file or invalidate a live session.
  * Use GET /usages, never the completion endpoint. */
-export async function fetchKimiRateLimits(options?: {
-  home?: KimiHomeResolution
-}): Promise<ProviderRateLimits> {
-  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+export async function fetchKimiRateLimits(
+  options?: DirectQuotaQueryOptions & { home?: KimiHomeResolution }
+): Promise<ProviderRateLimits> {
+  if (options?.allowDirectQuotaQueries !== true || options?.signal?.aborted) {
     return disabledUsageSnapshot('kimi')
   }
   const home: KimiHomeResolution = options?.home ?? {
@@ -320,7 +321,7 @@ export async function fetchKimiRateLimits(options?: {
     const res = await getMainHttpClient().fetch(readResult.usageUrl, {
       // Match CLI fetchManagedUsage headers; this token-authenticated endpoint needs no custom User-Agent.
       headers: { Authorization: `Bearer ${creds.access_token}`, Accept: 'application/json' },
-      signal: AbortSignal.timeout(API_TIMEOUT_MS)
+      signal: abortSignalWithTimeout(options?.signal, API_TIMEOUT_MS)
     })
     if (res.status === 401 || res.status === 403) {
       return result('error', `Kimi usage request unauthorized (HTTP ${res.status})`)

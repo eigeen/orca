@@ -9,7 +9,11 @@ import type { RuntimeClientTarget } from '../../../../../../shared/runtime-clien
 export type UsageHostSettings = Partial<
   Pick<
     GlobalSettings,
-    'minimaxEndpoint' | 'minimaxGroupId' | 'minimaxUsageModels' | 'zcodePlanSite'
+    | 'minimaxEndpoint'
+    | 'minimaxGroupId'
+    | 'minimaxUsageModels'
+    | 'zcodePlanSite'
+    | 'directQuotaQueriesEnabled'
   >
 >
 
@@ -24,7 +28,8 @@ function pickUsageHostSettings(settings: Partial<GlobalSettings>): UsageHostSett
     minimaxEndpoint: settings.minimaxEndpoint,
     minimaxGroupId: settings.minimaxGroupId,
     minimaxUsageModels: settings.minimaxUsageModels,
-    zcodePlanSite: settings.zcodePlanSite
+    zcodePlanSite: settings.zcodePlanSite,
+    directQuotaQueriesEnabled: settings.directQuotaQueriesEnabled
   }
 }
 
@@ -84,10 +89,14 @@ export function useUsageHostSettings(
           updates,
           { timeoutMs: 15_000 }
         )
-        setRemote({
-          environmentId: ownerEnvironmentId,
-          settings: pickUsageHostSettings(result.settings)
-        })
+        setRemote((current) =>
+          current?.environmentId === ownerEnvironmentId
+            ? {
+                environmentId: ownerEnvironmentId,
+                settings: pickUsageHostSettings(result.settings)
+              }
+            : current
+        )
       } catch (error) {
         toast.error(
           translate(

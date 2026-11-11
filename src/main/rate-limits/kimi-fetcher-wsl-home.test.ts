@@ -1,9 +1,6 @@
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../network/direct-provider-requests', () => ({
-  DIRECT_PROVIDER_REQUESTS_ENABLED: true
-}))
 import { setMainHttpClient } from '../network/http-client'
 
 const fetchMock = vi.fn()
@@ -71,6 +68,7 @@ describe('fetchKimiRateLimits with a WSL credentials home', () => {
 
   it('reads the WSL token instead of the stale host one', async () => {
     const result = await fetchKimiRateLimits({
+      allowDirectQuotaQueries: true,
       home: { runtime: 'wsl', wslDistro: 'Ubuntu', path: WSL_HOME }
     })
 
@@ -88,6 +86,7 @@ describe('fetchKimiRateLimits with a WSL credentials home', () => {
     const timeout = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(timeoutController.signal)
 
     const pending = fetchKimiRateLimits({
+      allowDirectQuotaQueries: true,
       home: { runtime: 'wsl', wslDistro: 'Stopped', path: stalledHome }
     })
     expect(timeout).toHaveBeenCalledWith(5_000)

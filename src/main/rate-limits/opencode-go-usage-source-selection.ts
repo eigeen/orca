@@ -1,5 +1,5 @@
 import type { NetworkProxySettings } from '../../shared/network-proxy'
-import { DIRECT_PROVIDER_REQUESTS_ENABLED } from '../network/direct-provider-requests'
+import type { DirectQuotaQueryOptions } from './direct-quota-query-options'
 import { disabledUsageSnapshot } from './disabled-usage-snapshot'
 import type { ProviderRateLimits, UsageRateLimitMetadata } from '../../shared/rate-limit-types'
 import {
@@ -14,7 +14,7 @@ import {
 } from './opencode-go-usage-api'
 import { fetchOpenCodeGoRateLimits, normalizeCookieInput } from './opencode-go-usage-fetcher'
 
-export type OpenCodeGoUsageSourceInput = {
+export type OpenCodeGoUsageSourceInput = DirectQuotaQueryOptions & {
   /** Explicit Orca override; the highest-precedence key tier. */
   settingsApiKey?: string
   environment?: NodeJS.ProcessEnv
@@ -23,7 +23,6 @@ export type OpenCodeGoUsageSourceInput = {
   cookie: string
   workspaceIdOverride?: string
   networkProxySettings?: NetworkProxySettings
-  signal?: AbortSignal
   /** Lets the caller record key presence without handling the key itself. */
   onApiKeyResolved?: (resolution: OpenCodeGoApiKeyResolution) => void
 }
@@ -92,7 +91,7 @@ function apiFailureResult(
 export async function fetchOpenCodeGoUsage(
   input: OpenCodeGoUsageSourceInput
 ): Promise<ProviderRateLimits> {
-  if (!DIRECT_PROVIDER_REQUESTS_ENABLED) {
+  if (input.allowDirectQuotaQueries !== true || input.signal?.aborted) {
     return disabledUsageSnapshot('opencode-go')
   }
   const context = input.settingsApiKey?.trim()
@@ -120,7 +119,8 @@ export async function fetchOpenCodeGoUsage(
       ? fetchOpenCodeGoRateLimits(
           input.cookie,
           input.workspaceIdOverride,
-          input.networkProxySettings
+          input.networkProxySettings,
+          input.signal
         )
       : emptyResult('No OpenCode Go API key or session cookie configured', 'unavailable', {
           failureKind: 'missing-credentials'
@@ -139,7 +139,8 @@ export async function fetchOpenCodeGoUsage(
   const cookieResult = await fetchOpenCodeGoRateLimits(
     input.cookie,
     input.workspaceIdOverride,
-    input.networkProxySettings
+    input.networkProxySettings,
+    input.signal
   )
   return cookieResult.status === 'ok' ? cookieResult : apiFailureResult(outcome, tier)
 }

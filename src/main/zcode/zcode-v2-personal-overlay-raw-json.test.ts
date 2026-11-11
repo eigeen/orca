@@ -3,9 +3,6 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../network/direct-provider-requests', () => ({
-  DIRECT_PROVIDER_REQUESTS_ENABLED: true
-}))
 import { fetchZcodeRateLimits } from '../rate-limits/zcode-usage-fetcher'
 import { readZcodeUsageCredentials } from '../rate-limits/zcode-usage-credentials'
 import { readZcodeV2PlanCredential, type ZcodeCredentialHost } from './zcode-v2-plan-credentials'
@@ -92,7 +89,9 @@ describe('raw persisted personal rule keys', () => {
 
       expect(readZcodeV2PlanCredential(host).status).toBe('unavailable')
       expect(readZcodeUsageCredentials({ credentialHost: host }).status).toBe('unavailable')
-      expect((await fetchZcodeRateLimits({ credentialHost: host })).status).toBe('unavailable')
+      expect(
+        (await fetchZcodeRateLimits({ allowDirectQuotaQueries: true, credentialHost: host })).status
+      ).toBe('unavailable')
       expect(fetch).not.toHaveBeenCalled()
       for (const calls of [stat.mock.calls, lstat.mock.calls, open.mock.calls, read.mock.calls]) {
         expect(calls.filter(([path]) => path === vaultPath)).toHaveLength(0)
@@ -101,6 +100,7 @@ describe('raw persisted personal rule keys', () => {
       expect(fs.readFileSync(vaultPath)).toEqual(vaultBefore)
 
       const saved = await fetchZcodeRateLimits({
+        allowDirectQuotaQueries: true,
         credentialHost: host,
         planCredential: {
           apiKey: 'synthetic-orca-key',

@@ -529,6 +529,10 @@
     "refreshingDetails": "Refreshing check details…"
   },
   "settings": {
+    "directQuotaQueries": {
+      "label": "Query provider quotas",
+      "description": "Allow the selected host to query providers directly using your account credentials."
+    },
     "selfHostedRelay": {
       "title": "Self-hosted Relay",
       "address": "Relay HTTPS address",

@@ -17,10 +17,11 @@ vi.mock('../rate-limits/claude-oauth-credentials', () => ({
 
 afterEach(() => {
   setMainHttpClient(null)
+  vi.clearAllMocks()
   vi.unstubAllGlobals()
 })
 
-describe('provider requests in the CLI-only build', () => {
+describe('direct provider requests', () => {
   it('settles Claude usage without reading credentials or contacting Anthropic', async () => {
     const fetch = vi.fn(async () => new Response(null, { status: 403 }))
     setMainHttpClient({ fetch, proxySession: () => null })
@@ -32,6 +33,30 @@ describe('provider requests in the CLI-only build', () => {
     )
     await expect(fetchClaudeOAuthUsage('synthetic-claude-token')).rejects.toThrow(/disabled/)
     expect(readClaudeOAuthCredentials).not.toHaveBeenCalled()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('reads Claude quota after opt-in and stops when the opt-in is removed', async () => {
+    const fetch = vi.fn(async () => Response.json({ five_hour: { utilization: 37 } }))
+    setMainHttpClient({ fetch, proxySession: () => null })
+
+    await expect(fetchClaudeRateLimits({ allowDirectQuotaQueries: true })).resolves.toMatchObject({
+      provider: 'claude',
+      status: 'ok',
+      session: { usedPercent: 37 }
+    })
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.anthropic.com/api/oauth/usage',
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer synthetic-claude-token' })
+      })
+    )
+    fetch.mockClear()
+
+    await expect(fetchClaudeRateLimits({ allowDirectQuotaQueries: false })).resolves.toMatchObject({
+      status: 'idle',
+      session: null
+    })
     expect(fetch).not.toHaveBeenCalled()
   })
 

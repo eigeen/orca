@@ -87,6 +87,7 @@ export abstract class RateLimitServiceFullCyclePreparation extends RateLimitServ
       return null
     }
     const previousState = this.state
+    const quotaQueryOptions = this.directQuotaQueryOptions(signal)
     const antigravityGeneration = this.antigravityFetchGeneration
     const antigravityTarget = this.antigravityFetchTarget
     const codexFetchGated = codexHome.skip
@@ -181,7 +182,7 @@ export abstract class RateLimitServiceFullCyclePreparation extends RateLimitServ
     const cursorResultPromise = readCursorAuthSession()
       .then((authReadResult) => {
         this.cursorAuthConfigured = authReadResult.status === 'ok'
-        return fetchCursorRateLimits({ signal, authReadResult })
+        return fetchCursorRateLimits({ ...quotaQueryOptions, authReadResult })
       })
       .then(
         (value) => ({ status: 'fulfilled', value }) as const,
@@ -191,7 +192,7 @@ export abstract class RateLimitServiceFullCyclePreparation extends RateLimitServ
     const zcodeResultPromise = (
       zcodePlanConfigResult.error
         ? Promise.resolve(this.getZcodePlanCredentialError(zcodePlanConfigResult.error))
-        : fetchZcodeRateLimits({ signal, planCredential: zcodePlanCredential })
+        : fetchZcodeRateLimits({ ...quotaQueryOptions, planCredential: zcodePlanCredential })
     ).then(
       (value) => ({ status: 'fulfilled', value }) as const,
       (reason) => ({ status: 'rejected', reason }) as const
@@ -212,7 +213,7 @@ export abstract class RateLimitServiceFullCyclePreparation extends RateLimitServ
     const missingWslCodexHome =
       codexFetchGated || codexHomePath ? null : this.getMissingWslCodexHomeResult(codexTarget)
     const grokResultPromise = fetchGrokRateLimits({
-      signal,
+      ...quotaQueryOptions,
       authReadResult: grokAuthReadResult
     }).then(
       (value) => ({ status: 'fulfilled', value }) as const,
@@ -232,7 +233,7 @@ export abstract class RateLimitServiceFullCyclePreparation extends RateLimitServ
               allowPtyFallback: this.shouldAllowClaudePtyFallback(claudeAuthPreparation),
               allowUsagePanelSupplement: this.shouldAllowClaudeUsagePanelSupplement(),
               networkProxySettings: this.networkProxySettingsResolver?.(),
-              signal
+              ...quotaQueryOptions
             }),
         codexFetchGated
           ? Promise.resolve(previousState.codex as ProviderRateLimits)
@@ -240,9 +241,9 @@ export abstract class RateLimitServiceFullCyclePreparation extends RateLimitServ
             fetchCodexRateLimits({
               codexHomePath,
               networkProxySettings: this.networkProxySettingsResolver?.(),
-              signal
+              ...quotaQueryOptions
             })),
-        fetchGeminiRateLimits(geminiCliOAuthEnabled),
+        fetchGeminiRateLimits(geminiCliOAuthEnabled, quotaQueryOptions),
         fetchOpenCodeGoUsage({
           settingsApiKey: openCodeGoApiKey,
           // Store/env keys become known only when the fetch resolves them.
@@ -260,9 +261,9 @@ export abstract class RateLimitServiceFullCyclePreparation extends RateLimitServ
           cookie,
           workspaceIdOverride: workspaceIdOverride || undefined,
           networkProxySettings: this.networkProxySettingsResolver?.(),
-          signal
+          ...quotaQueryOptions
         }),
-        this.fetchKimiWithResolvedHome(),
+        this.fetchKimiWithResolvedHome(signal),
         miniMaxConfigResult.error
           ? Promise.resolve(this.getMiniMaxCredentialError(miniMaxConfigResult.error))
           : fetchMiniMaxRateLimits({
@@ -270,7 +271,8 @@ export abstract class RateLimitServiceFullCyclePreparation extends RateLimitServ
               groupId: miniMaxGroupId,
               models: miniMaxModels,
               endpointMode: miniMaxEndpoint,
-              apiKey: miniMaxApiKey
+              apiKey: miniMaxApiKey,
+              ...quotaQueryOptions
             })
       ])
 
