@@ -1,5 +1,4 @@
-import type { ProviderRateLimits } from '../../../../shared/rate-limit-types'
-import { directQuotaDisabledSnapshot } from '../../service/disabled-usage-snapshot'
+import type { ProviderRateLimits } from '../../../../shared/agent-usage/rate-limits/rate-limit-types'
 import {
   readClaudeOAuthCredentials,
   type ClaudeOAuthCredentialReadResult,
@@ -10,15 +9,12 @@ import { classifyClaudeOAuthUsageError } from './claude-usage-error-classificati
 import { OAuthUsageError } from './claude-oauth-usage-error'
 import type { ClaudeRateLimitFetchOptions } from './claude-usage-fetch-options'
 import { abortedClaudeRateLimitResult, makeClaudeUsageResult } from './claude-usage-result'
-import { CLAUDE_PROFILE_MISSING_MESSAGE } from '../../../../shared/claude-profile-routing'
+import { CLAUDE_PROFILE_MISSING_MESSAGE } from '../../../../shared/agent-accounts/claude/claude-profile-routing'
 
 /** Usage observes the account; only a user-started Claude process may refresh its login. */
 export async function fetchActiveClaudeRateLimits(
   options?: ClaudeRateLimitFetchOptions
 ): Promise<ProviderRateLimits> {
-  if (options?.allowDirectQuotaQueries !== true) {
-    return directQuotaDisabledSnapshot('claude')
-  }
   const usageError = options?.authPreparation?.usageError
   if (usageError) {
     return makeClaudeUsageResult('error', usageError, {
@@ -64,7 +60,21 @@ export async function fetchActiveClaudeRateLimits(
     )
   }
   try {
-    return await fetchClaudeOAuthUsage(credentials.token, options)
+    const usage = await fetchClaudeOAuthUsage(credentials.token, options?.signal)
+    // Name the login a reading came from so its plan never follows another account's reading.
+    return usage.status === 'ok'
+      ? {
+          ...usage,
+          ...(credentials.planType ? { planType: credentials.planType } : {}),
+          usageMetadata: {
+            ...usage.usageMetadata,
+            ...metadata,
+            ...(options?.authPreparation?.readingAccount
+              ? { readingAccount: options.authPreparation.readingAccount }
+              : {})
+          }
+        }
+      : usage
   } catch (error) {
     const { failureKind } = classifyClaudeOAuthUsageError(error)
     if (failureKind === 'stale-token' && !canClaudeRenewLogin(credentials, error)) {

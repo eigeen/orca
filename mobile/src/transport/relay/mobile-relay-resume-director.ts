@@ -1,5 +1,5 @@
-import { z } from 'zod'
-import { parseRetryAfterHeaderMs } from '../../../../src/shared/retry-after-header'
+import * as z from 'zod'
+import { parseRetryAfterHeaderMs } from '../../../../src/shared/network/retry-after-header'
 import { MOBILE_RELAY_RETRY_AFTER_MAX_MS } from './mobile-relay-retry-delays'
 import type { MobileRelayEndpoint } from '../../../../src/shared/remote-runtime/relay/mobile-relay-credential-contract'
 import { assertMobileRelayOrigin } from '../mobile-relay-origin-policy'
@@ -15,6 +15,33 @@ export class RelayDirectorHttpError extends Error {
     readonly retryAfterMs: number | null
   ) {
     super(`relay director resolve failed (${status})`)
+  }
+}
+
+export class RelayDirectorResolveTimeoutError extends Error {
+  readonly name = 'RelayDirectorResolveTimeoutError'
+
+  constructor(readonly timeoutMs: number) {
+    super(`relay director resolve timed out after ${timeoutMs}ms`)
+  }
+}
+
+// On lossy networks a TCP connect alone can take 4s+, so a 5s budget can expire before TLS.
+// Healthy resolves keep the short budget; after one times out, the next gets 10s until one succeeds.
+export class RelayResolveTimeoutBudget {
+  private widened = false
+
+  get timeoutMs(): number {
+    return this.widened ? 10_000 : 5_000
+  }
+
+  succeeded(): void {
+    this.widened = false
+  }
+
+  // Other failures (HTTP status, bad body) say nothing about the budget.
+  failed(error: unknown): void {
+    this.widened ||= error instanceof RelayDirectorResolveTimeoutError
   }
 }
 
@@ -39,7 +66,8 @@ export async function resolveMobileRelayEndpoint(args: {
   timeoutMs?: number
 }): Promise<MobileRelayEndpoint> {
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), args.timeoutMs ?? 5000)
+  const timeoutMs = args.timeoutMs ?? 5000
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
     assertMobileRelayOrigin(args.relay.directorUrl)
     const url = new URL('/v1/resolve', args.relay.directorUrl)
@@ -78,6 +106,8 @@ export async function resolveMobileRelayEndpoint(args: {
       cellUrl: resolved.cellUrl,
       assignmentEpoch: resolved.assignmentEpoch
     }
+  } catch (error) {
+    throw controller.signal.aborted ? new RelayDirectorResolveTimeoutError(timeoutMs) : error
   } finally {
     clearTimeout(timer)
   }

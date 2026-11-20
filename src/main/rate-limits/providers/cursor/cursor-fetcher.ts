@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto'
 import { getMainHttpClient } from '../../../network/http-client'
-import type { ProviderRateLimits, UsageRateLimitSource } from '../../../../shared/rate-limit-types'
+import type {
+  ProviderRateLimits,
+  UsageRateLimitSource
+} from '../../../../shared/agent-usage/rate-limits/rate-limit-types'
 import { abortSignalWithTimeout } from '../../../lib/abort-signal-with-timeout'
 import type { DirectQuotaQueryOptions } from '../../direct-quota-query-options'
 import { directQuotaDisabledSnapshot } from '../../service/disabled-usage-snapshot'
@@ -17,7 +20,7 @@ import {
   mapCursorUsageSummary,
   parseCursorUsageSummary
 } from './cursor-usage-mapping'
-import { CURSOR_ON_DEMAND_BUCKET_NAME } from '../../../../shared/cursor-usage-buckets'
+import { CURSOR_ON_DEMAND_BUCKET_NAME } from '../../../../shared/agent-usage/rate-limits/cursor-usage-buckets'
 import { parseUsageRetryAfterMs } from '../usage-retry-after'
 
 const DASHBOARD_ORIGIN = 'https://cursor.com'

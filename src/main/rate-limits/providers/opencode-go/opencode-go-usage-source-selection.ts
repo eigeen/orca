@@ -1,8 +1,8 @@
-import type { NetworkProxySettings } from '../../../../shared/network-proxy'
+import type { NetworkProxySettings } from '../../../../shared/network/network-proxy'
 import type {
   ProviderRateLimits,
   UsageRateLimitMetadata
-} from '../../../../shared/rate-limit-types'
+} from '../../../../shared/agent-usage/rate-limits/rate-limit-types'
 import type { DirectQuotaQueryOptions } from '../../direct-quota-query-options'
 import { directQuotaDisabledSnapshot } from '../../service/disabled-usage-snapshot'
 import {
@@ -10,7 +10,7 @@ import {
   type OpenCodeGoApiKeyResolution
 } from './opencode-go-api-key-source'
 import { makeOpenCodeGoZenBalance, type OpenCodeGoUsageWindows } from './opencode-go-status-parsing'
-import type { OpenCodeCredentialBackend } from '../../../opencode/opencode-credential-backend'
+import type { OpenCodeCredentialBackend } from '../../../opencode/accounts/opencode-credential-backend'
 import {
   fetchOpenCodeGoUsageWithApiKey,
   type OpenCodeGoUsageApiOutcome

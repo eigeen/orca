@@ -4,6 +4,22 @@ import { translateSearchKeyword } from '../search/settings-search-keywords'
 
 export const getAccountsClaudeSearchEntries = createLocalizedCatalog(() => [
   {
+    title: translate('accounts.claude.oauthUsage.title', 'Claude usage polling'),
+    description: translate(
+      'accounts.claude.oauthUsage.description',
+      'Uses your Claude Code sign-in to check usage, credits, and inactive accounts. Turn off to use live terminal readings only.'
+    ),
+    keywords: [
+      ...translateSearchKeyword('auto.components.settings.accounts.search.e14049e1a8', 'claude'),
+      ...translateSearchKeyword('auto.components.settings.accounts.search.c759741d77', 'quota'),
+      ...translateSearchKeyword(
+        'auto.components.settings.accounts.search.e949b08ffb',
+        'rate limit'
+      ),
+      ...translateSearchKeyword('auto.components.settings.accounts.search.86edc96bc9', 'status bar')
+    ]
+  },
+  {
     title: translate('auto.components.settings.accounts.search.be3a748ebb', 'Claude accounts'),
     description: translate(
       'auto.components.settings.accounts.search.dd75a73991',
@@ -29,7 +45,7 @@ export const getAccountsClaudeSearchEntries = createLocalizedCatalog(() => [
     ),
     description: translate(
       'accounts.claude.switchSessions.settingDescription',
-      'Restarting continues each terminal conversation on the new account.'
+      'Restarting continues each terminal conversation on the new account. Busy sessions stop their current work.'
     ),
     keywords: [
       ...translateSearchKeyword('auto.components.settings.accounts.search.e14049e1a8', 'claude'),

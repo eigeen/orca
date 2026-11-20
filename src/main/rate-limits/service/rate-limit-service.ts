@@ -1,7 +1,7 @@
 import {
   localAccountRuntimeTargetKey,
   type LocalAccountRuntimeTarget
-} from '../../../shared/local-account-runtime'
+} from '../../../shared/agent-accounts/local-account-runtime'
 import type { BrowserWindow } from 'electron'
 import { hasMiniMaxSessionCookie } from '../../minimax/minimax-cookie-store'
 import { hasMiniMaxApiKey } from '../../minimax/minimax-api-key-store'
@@ -11,7 +11,7 @@ import type { AntigravityAccountUsageRecorder } from '../providers/antigravity/a
 import {
   type CodexAccountSelectionTarget,
   normalizeCodexAccountSelectionTarget
-} from '../../../shared/codex-selection-lane'
+} from '../../../shared/agent-accounts/codex/codex-selection-lane'
 import type {
   CodexHomePathResolver,
   KimiHomeResolver,
@@ -19,6 +19,7 @@ import type {
   OpenCodeGoRateLimitConfig,
   MiniMaxRateLimitConfig,
   AntigravityUsageEnabledResolver,
+  ClaudeOAuthUsageEnabledResolver,
   MuseUsageEnabledResolver,
   ZcodePlanRateLimitConfig,
   GeminiCliOAuthEnabledResolver,
@@ -27,10 +28,10 @@ import type {
 import {
   type ClaudeAccountSelectionTarget,
   normalizeClaudeAccountSelectionTarget
-} from '../../claude-accounts/runtime-selection'
+} from '../../claude-accounts/selection/runtime-selection'
 import type { InactiveClaudeAccount } from '../providers/claude/claude-managed-account-usage'
-import type { RateLimitState } from '../../../shared/rate-limit-types'
-import type { NetworkProxySettings } from '../../../shared/network-proxy'
+import type { RateLimitState } from '../../../shared/agent-usage/rate-limits/rate-limit-types'
+import type { NetworkProxySettings } from '../../../shared/network/network-proxy'
 
 export class RateLimitService extends RateLimitServiceAccountRefresh {
   setCodexHomePathResolver(resolver: CodexHomePathResolver): void {
@@ -73,6 +74,27 @@ export class RateLimitService extends RateLimitServiceAccountRefresh {
     this.geminiCliOAuthEnabledResolver = resolver
   }
 
+  setClaudeOAuthUsageEnabledResolver(resolver: ClaudeOAuthUsageEnabledResolver): void {
+    this.claudeOAuthUsageEnabledResolver = resolver
+  }
+
+  // Retain only readings actually received from the terminal feed.
+  discardClaudeOAuthUsage(): void {
+    this.claudeUsageAbortController.abort()
+    this.claudeUsageAbortController = new AbortController()
+    this.claudeFetchGeneration += 1
+    this.inactiveClaudeAccountsGeneration += 1
+    this.inactiveClaudeCache.clear()
+    this.inactiveClaudeFetching.clear()
+    this.lastInactiveClaudeFetchAt = 0
+    this.lastClaudeCheckCompletedAt = null
+    this.activeFailureStreakByProvider.claude = 0
+    this.updateState({ ...this.state, claude: this.claudeUsageWithoutOAuth() })
+    if (!this.lastClaudeAuthSnapshot) {
+      void this.fetchClaudeOnly({ force: true })
+    }
+  }
+
   setAntigravityUsageEnabledResolver(resolver: AntigravityUsageEnabledResolver): void {
     this.antigravityUsageEnabledResolver = resolver
   }
@@ -109,9 +131,7 @@ export class RateLimitService extends RateLimitServiceAccountRefresh {
 
   async refreshAfterDirectQuotaSettingChange(): Promise<void> {
     this.abortActiveFetchCycle()
-    this.lastInactiveClaudeFetchAt = 0
     if (!this.directQuotaQueriesEnabled()) {
-      this.inactiveClaudeCache.clear()
       this.inactiveCodexCache.clear()
       this.lastInactiveCodexFetchAt = 0
     }
@@ -177,6 +197,10 @@ export class RateLimitService extends RateLimitServiceAccountRefresh {
       void this.fetchAll()
     } else {
       this.scheduleDeferredStartupRefresh()
+      // Passive terminal usage needs account attribution even without a usage viewer.
+      if (!this.isClaudeOAuthUsageEnabled()) {
+        void this.fetchClaudeOnly({ force: true })
+      }
     }
     this.startTimer()
   }

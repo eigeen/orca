@@ -1,15 +1,16 @@
-import type { NetworkProxySettings } from '../../../../shared/network-proxy'
+import type { NetworkProxySettings } from '../../../../shared/network/network-proxy'
 import type { ClaudeRuntimeAuthPreparation } from '../../../claude-accounts/runtime-auth/runtime-auth-types'
-import type { DirectQuotaQueryOptions } from '../../direct-quota-query-options'
 
-export type ClaudeRateLimitFetchOptions = DirectQuotaQueryOptions & {
+export type ClaudeRateLimitFetchOptions = {
   authPreparation?: ClaudeRuntimeAuthPreparation
   allowPtyFallback?: boolean
   allowUsagePanelSupplement?: boolean
   networkProxySettings?: NetworkProxySettings
+  signal?: AbortSignal
 }
 
-export type ClaudeManagedAccountUsageOptions = DirectQuotaQueryOptions & {
+export type ClaudeManagedAccountUsageOptions = {
   allowUsagePanelSupplement?: boolean
   networkProxySettings?: NetworkProxySettings
+  signal?: AbortSignal
 }

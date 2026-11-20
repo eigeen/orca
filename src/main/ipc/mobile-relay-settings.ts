@@ -9,7 +9,7 @@ import {
   getSelfHostedRelaySettings,
   saveSelfHostedRelaySettings
 } from '../runtime/mobile-cloud-relay/self-hosted-relay-preferences'
-import { showSingleFlightOpenDialog } from './single-flight-open-dialog'
+import { showSingleFlightOpenDialog } from './dialogs/single-flight-open-dialog'
 import { isTrustedUIRenderer } from './ui'
 
 export function registerMobileRelaySettingsHandlers(): void {

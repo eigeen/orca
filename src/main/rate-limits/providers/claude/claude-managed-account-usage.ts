@@ -1,10 +1,9 @@
-import type { ProviderRateLimits } from '../../../../shared/rate-limit-types'
-import { directQuotaDisabledSnapshot } from '../../service/disabled-usage-snapshot'
+import type { ProviderRateLimits } from '../../../../shared/agent-usage/rate-limits/rate-limit-types'
 import {
   getClaudeProfileRouter,
   getClaudeWslProfileRouter
-} from '../../../claude-accounts/claude-profile-installed-router'
-import { toWindowsWslPath } from '../../../../shared/wsl-paths'
+} from '../../../claude-accounts/profiles/routing/claude-profile-installed-router'
+import { toWindowsWslPath } from '../../../../shared/file-access/wsl-paths'
 import type { ClaudeManagedAccountUsageOptions } from './claude-usage-fetch-options'
 import { fetchActiveClaudeRateLimits } from './claude-active-usage-fetch'
 import { claudeUsageUnavailable, makeClaudeUsageResult } from './claude-usage-result'
@@ -22,14 +21,11 @@ export async function fetchInactiveClaudeAccountUsage(
   account: InactiveClaudeAccount,
   options: ClaudeManagedAccountUsageOptions = {}
 ): Promise<ProviderRateLimits> {
-  if (options.allowDirectQuotaQueries !== true) {
-    return directQuotaDisabledSnapshot('claude')
-  }
   if (account.managedAuthRuntime !== 'wsl') {
     // Covered accounts share System Default usage and launch routing.
     const authPreparation = getClaudeProfileRouter()?.accountUsagePreparation(account.id)
     return authPreparation
-      ? fetchActiveClaudeRateLimits({ ...options, authPreparation })
+      ? fetchActiveClaudeRateLimits({ signal: options.signal, authPreparation })
       : signInAgain()
   }
   const distro = account.wslDistro
@@ -46,7 +42,9 @@ export async function fetchInactiveClaudeAccountUsage(
   const timeout = AbortSignal.timeout(INACTIVE_WSL_READ_TIMEOUT_MS)
   const read = router
     .accountUsagePreparation(distro, account.id)
-    .then((authPreparation) => fetchActiveClaudeRateLimits({ ...options, authPreparation }))
+    .then((authPreparation) =>
+      fetchActiveClaudeRateLimits({ signal: options.signal, authPreparation })
+    )
     .catch(() => claudeUsageUnavailable())
   return Promise.race([
     read,

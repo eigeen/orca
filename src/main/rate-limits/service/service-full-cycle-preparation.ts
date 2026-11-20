@@ -8,7 +8,7 @@ import { readCursorAuthSession } from '../providers/cursor/cursor-auth'
 import { fetchZcodeRateLimits } from '../providers/zcode/zcode-usage-fetcher'
 import { fetchAntigravityRateLimits } from '../providers/antigravity/antigravity-usage-fetcher'
 import { antigravityUsageDisabledSnapshot } from '../providers/antigravity/antigravity-usage-snapshot'
-import { ZCODE_PLAN_SITE_BASE_URLS } from '../../../shared/zcode-plan-sites'
+import { ZCODE_PLAN_SITE_BASE_URLS } from '../../../shared/agent-accounts/usage-credentials/zcode-plan-sites'
 import { fetchMiniMaxRateLimits } from '../providers/minimax/minimax-fetcher'
 import { createHash } from 'node:crypto'
 import { fetchOpenCodeGoUsage } from '../providers/opencode-go/opencode-go-usage-source-selection'
@@ -16,9 +16,9 @@ import { RateLimitServiceAntigravityAccounts } from './service-antigravity-accou
 import type { SettledProviderResult } from './service-sibling-provider-result'
 import type { ClaudeRuntimeAuthPreparation } from '../../claude-accounts/runtime-auth/runtime-auth-types'
 import type { InternalRateLimitState } from './service-types'
-import type { NormalizedClaudeAccountSelectionTarget } from '../../claude-accounts/runtime-selection'
-import type { NormalizedCodexAccountSelectionTarget } from '../../../shared/codex-selection-lane'
-import type { ProviderRateLimits } from '../../../shared/rate-limit-types'
+import type { NormalizedClaudeAccountSelectionTarget } from '../../claude-accounts/selection/runtime-selection'
+import type { NormalizedCodexAccountSelectionTarget } from '../../../shared/agent-accounts/codex/codex-selection-lane'
+import type { ProviderRateLimits } from '../../../shared/agent-usage/rate-limits/rate-limit-types'
 
 export type FetchAllCyclePrepared = {
   claudeTarget: NormalizedClaudeAccountSelectionTarget
@@ -30,6 +30,7 @@ export type FetchAllCyclePrepared = {
   codexFetchGated: boolean
   codexStateBeforeFetch: ProviderRateLimits | null
   codexProvenance: string | null
+  codexHomePath: string | null
   codexGeneration: number
   opencodeConfigChanged: boolean
   opencodeGeneration: number
@@ -102,11 +103,7 @@ export abstract class RateLimitServiceFullCyclePreparation extends RateLimitServ
     const openCodeGoApiKeyError = openCodeGoConfig.apiKeyError
     const openCodeGoApiKeyReadSkipped = openCodeGoConfig.apiKeyReadSkipped
     const miniMaxConfigResult = this.resolveMiniMaxConfig()
-    const miniMaxCookie = miniMaxConfigResult.config.sessionCookie
-    const miniMaxGroupId = miniMaxConfigResult.config.groupId
-    const miniMaxModels = miniMaxConfigResult.config.models
-    const miniMaxEndpoint = miniMaxConfigResult.config.endpoint
-    const miniMaxApiKey = miniMaxConfigResult.config.apiKey
+    const miniMaxConfig = miniMaxConfigResult.config
     const geminiCliOAuthEnabled = this.geminiCliOAuthEnabledResolver?.() ?? false
     // Probe auth during fetch, not hot renderer/mobile getState calls.
     const grokAuthReadResult = readGrokAuthSession()
@@ -124,7 +121,7 @@ export abstract class RateLimitServiceFullCyclePreparation extends RateLimitServ
     }
     const opencodeGeneration = this.opencodeFetchGeneration
 
-    const currentMiniMaxConfigHash = `${miniMaxCookie}|${miniMaxGroupId}|${miniMaxModels}|${miniMaxEndpoint}|${miniMaxApiKey}|${miniMaxConfigResult.error ?? ''}`
+    const currentMiniMaxConfigHash = `${miniMaxConfig.sessionCookie}|${miniMaxConfig.groupId}|${miniMaxConfig.models}|${miniMaxConfig.endpoint}|${miniMaxConfig.apiKey}|${miniMaxConfigResult.error ?? ''}`
     const miniMaxConfigChanged = currentMiniMaxConfigHash !== this.lastMiniMaxConfigHash
     if (miniMaxConfigChanged) {
       this.lastMiniMaxConfigHash = currentMiniMaxConfigHash
@@ -153,7 +150,7 @@ export abstract class RateLimitServiceFullCyclePreparation extends RateLimitServ
 
     this.updateState({
       ...previousState,
-      claude: this.withFetchingStatus(previousState.claude, 'claude'),
+      claude: this.claudeStateAtCycleStart(previousState.claude),
       // A gated slot makes no attempt and cannot settle a fetching chip.
       codex: codexFetchGated
         ? codexStateBeforeFetch
@@ -220,7 +217,9 @@ export abstract class RateLimitServiceFullCyclePreparation extends RateLimitServ
 
     // Live display does not waive automated Retry-After gates.
     const claudeFetchGated =
-      !options?.force && this.shouldSkipAutomatedFetch('claude', previousState.claude)
+      !this.isClaudeOAuthUsageEnabled() ||
+      claudeGeneration !== this.claudeFetchGeneration ||
+      (!options?.force && this.shouldSkipAutomatedFetch('claude', previousState.claude))
 
     const [claudeResult, codexResult, geminiResult, opencodeGoResult, kimiResult, miniMaxResult] =
       await Promise.allSettled([
@@ -231,13 +230,14 @@ export abstract class RateLimitServiceFullCyclePreparation extends RateLimitServ
               allowPtyFallback: this.shouldAllowClaudePtyFallback(claudeAuthPreparation),
               allowUsagePanelSupplement: this.shouldAllowClaudeUsagePanelSupplement(),
               networkProxySettings: this.networkProxySettingsResolver?.(),
-              ...quotaQueryOptions
+              signal: this.claudeUsageFetchSignal(signal)
             }),
         codexFetchGated
           ? Promise.resolve(previousState.codex as ProviderRateLimits)
           : (missingWslCodexHome ??
             fetchCodexRateLimits({
               codexHomePath,
+              readingAccount: codexHome.readingAccount,
               networkProxySettings: this.networkProxySettingsResolver?.(),
               ...quotaQueryOptions
             })),
@@ -265,11 +265,11 @@ export abstract class RateLimitServiceFullCyclePreparation extends RateLimitServ
         miniMaxConfigResult.error
           ? Promise.resolve(this.getMiniMaxCredentialError(miniMaxConfigResult.error))
           : fetchMiniMaxRateLimits({
-              cookie: miniMaxCookie,
-              groupId: miniMaxGroupId,
-              models: miniMaxModels,
-              endpointMode: miniMaxEndpoint,
-              apiKey: miniMaxApiKey,
+              cookie: miniMaxConfig.sessionCookie,
+              groupId: miniMaxConfig.groupId,
+              models: miniMaxConfig.models,
+              endpointMode: miniMaxConfig.endpoint,
+              apiKey: miniMaxConfig.apiKey,
               ...quotaQueryOptions
             })
       ])
@@ -299,6 +299,7 @@ export abstract class RateLimitServiceFullCyclePreparation extends RateLimitServ
       codexFetchGated,
       codexStateBeforeFetch,
       codexProvenance,
+      codexHomePath,
       codexGeneration,
       opencodeConfigChanged,
       opencodeGeneration,

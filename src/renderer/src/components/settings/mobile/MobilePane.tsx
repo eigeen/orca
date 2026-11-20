@@ -8,7 +8,7 @@ import {
 } from '../../mobile/paired-mobile-devices'
 import { useMobilePairingDevicePolling } from '../../mobile/pairing/mobile-pairing-device-polling'
 import { useMobilePairedDeviceRevocation } from './pairing/use-mobile-paired-device-revocation'
-import type { PairingNetworkInterface } from '../../../../../shared/pairing-address-auto-selection'
+import type { PairingNetworkInterface } from '../../../../../shared/remote-runtime/pairing/pairing-address-auto-selection'
 import { MachineNameField } from '../../machine-identity/MachineNameField'
 import { MobilePairingQrSection } from './pairing/MobilePairingQrSection'
 import { MobilePairedDevicesSection } from './pairing/MobilePairedDevicesSection'
@@ -30,7 +30,7 @@ import {
 } from '../../mobile/use-mobile-pairing-connection-mode'
 import { useMobilePairingAddressPreference } from '../../mobile/use-mobile-pairing-address-preference'
 import { usePairingOfferExpiry } from '../../mobile/use-pairing-offer-expiry'
-import { shouldOpenMobilePairingAddress } from './mobile-pane-search'
+import { MOBILE_SETTING_ANCHORS, shouldOpenMobilePairingAddress } from './mobile-pane-search'
 import { SelfHostedRelaySettingsSection } from './SelfHostedRelaySettingsSection'
 
 export function MobilePane(): React.JSX.Element {
@@ -354,7 +354,7 @@ export function MobilePane(): React.JSX.Element {
       </div>
       <SelfHostedRelaySettingsSection />
 
-      <div data-settings-row="" className="space-y-6 py-4">
+      <div id={MOBILE_SETTING_ANCHORS.pairing} data-settings-row="" className="space-y-6 py-4">
         <MobilePairingSetupSection
           connectionMode={connectionMode}
           canGenerate={canMintMobilePairingOffer({ connectionMode, signedIn })}
@@ -421,7 +421,7 @@ export function MobilePane(): React.JSX.Element {
         />
       </div>
 
-      <div data-settings-row="" className="py-4">
+      <div id={MOBILE_SETTING_ANCHORS.devices} data-settings-row="" className="py-4">
         <MobilePairedDevicesSection
           devices={devices}
           hasQrCode={qrDataUrl != null}

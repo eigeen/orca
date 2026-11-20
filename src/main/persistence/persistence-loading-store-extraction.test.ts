@@ -9,7 +9,7 @@ import {
   testState
 } from './persistence-test-harness'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createProfileStateStore } from './profile-state/profile-state-store-factory'
+import { createProfileStateStore } from './profile-state/startup/profile-state-store-factory'
 import type * as FsModule from 'node:fs'
 import {
   existsSync,
@@ -64,6 +64,16 @@ describe('loading Store extraction seams', () => {
     vi.mocked(writeSync).mockClear()
     await closeTestStores()
     rmSync(testState.dir, { recursive: true, force: true })
+  })
+
+  it.each([
+    { stored: { directQuotaQueriesEnabled: false }, enabled: false },
+    { stored: { directQuotaQueriesEnabled: true }, enabled: true },
+    { stored: { directQuotaQueriesEnabled: true, claudeOAuthUsageEnabled: false }, enabled: false }
+  ])('preserves Claude polling on upgrade from $stored', async ({ stored, enabled }) => {
+    writeFileSync(dataFile(), JSON.stringify({ settings: stored }), 'utf-8')
+    const store = await createStore()
+    expect(store.getSettings().claudeOAuthUsageEnabled).toBe(enabled)
   })
 
   it('imports the first usable legacy backup without overwriting the damaged source', () => {

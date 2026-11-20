@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { basename, isAbsolute, join } from 'node:path'
 import { z } from 'zod'
-import { writeSecureJsonFile } from '../../../shared/secure-storage/secure-file'
+import { writeSelfHostedRelayPreference } from './self-hosted-relay-preference-writer'
 import type { SelfHostedRelaySettings } from '../../../shared/remote-runtime/relay/self-hosted-relay-settings'
 import {
   createSelfHostedRelayConfig,
@@ -92,6 +92,9 @@ export async function saveSelfHostedRelaySettings(
   preference: z.infer<typeof Preference>
 ): Promise<SelfHostedRelaySettings> {
   await initializeSelfHostedRelayConfig(directory)
-  writeSecureJsonFile(preferencePath(directory), preference)
+  await writeSelfHostedRelayPreference(
+    preferencePath(directory),
+    JSON.stringify(preference, null, 2)
+  )
   return getSelfHostedRelaySettings(directory)
 }

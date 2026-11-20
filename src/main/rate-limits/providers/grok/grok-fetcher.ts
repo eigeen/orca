@@ -4,7 +4,7 @@ import type {
   ProviderRateLimits,
   RateLimitWindow,
   UsageRateLimitMetadata
-} from '../../../../shared/rate-limit-types'
+} from '../../../../shared/agent-usage/rate-limits/rate-limit-types'
 import { abortSignalWithTimeout } from '../../../lib/abort-signal-with-timeout'
 import { classifyThrownUsageRequestError } from '../usage-request-failure-kind'
 import {
@@ -29,11 +29,7 @@ const GROK_CLI_AUTH_HEADER = 'xai-grok-cli'
 
 type GrokMoneyVal = { val?: string | number }
 
-type GrokUsagePeriod = {
-  type?: string
-  start?: string
-  end?: string
-}
+type GrokUsagePeriod = { type?: string; start?: string; end?: string }
 
 type GrokBillingConfig = {
   creditUsagePercent?: number
@@ -108,10 +104,14 @@ function usageScalars(config: GrokBillingConfig): (GrokMoneyVal | undefined)[] {
   ]
 }
 
+function reportsPositiveSpend(config: GrokBillingConfig): boolean {
+  return [config.onDemandUsed, config.used].some((value) => (parseMoneyVal(value) ?? 0) > 0)
+}
+
 function omittedPercentIsUnreported(config: GrokBillingConfig): boolean {
   // A strict zero cap rejects numeric prefixes like "0invalid" accepted by parseMoneyVal.
   if (parseMoneyVal(config.onDemandCap) === 0 && Number(config.onDemandCap?.val) === 0) {
-    return [config.onDemandUsed, config.used].some((value) => (parseMoneyVal(value) ?? 0) > 0)
+    return reportsPositiveSpend(config)
   }
   return usageScalars(config).some((value) => parseMoneyVal(value) === 0)
 }
@@ -122,11 +122,8 @@ function reportsAnyUsageScalar(config: GrokBillingConfig): boolean {
 
 function resolveWeeklyPercent(config: GrokBillingConfig): number | null {
   const reported = config.creditUsagePercent
-  if (typeof reported === 'number' && Number.isFinite(reported)) {
-    return reported
-  }
   if (reported !== undefined) {
-    return null
+    return Number.isFinite(reported) ? reported : null
   }
   // A computable monthly budget must not be relabelled as weekly zero usage.
   if (omittedPercentIsUnreported(config) || mapMonthlyUsage(config) !== null) {
@@ -140,14 +137,7 @@ function mapWeeklyCredits(config: GrokBillingConfig): RateLimitWindow | null {
   if (usedPercent === null) {
     return null
   }
-  const periodEnd = config.currentPeriod?.end ?? config.billingPeriodEnd
-  const resetsAt = periodEnd ? Date.parse(periodEnd) : null
-  return {
-    usedPercent: Math.min(100, Math.max(0, usedPercent)),
-    windowMinutes: WEEKLY_WINDOW_MINUTES,
-    resetsAt: resetsAt !== null && Number.isFinite(resetsAt) ? resetsAt : null,
-    resetDescription: parseResetDescription(periodEnd)
-  }
+  return mapUsageWindow(config, Math.min(100, Math.max(0, usedPercent)), WEEKLY_WINDOW_MINUTES)
 }
 
 function parseMoneyVal(value: GrokMoneyVal | undefined): number | null {
@@ -164,11 +154,19 @@ function mapMonthlyUsage(config: GrokBillingConfig): RateLimitWindow | null {
     return null
   }
   const usedPercent = Math.min(100, Math.max(0, (used / limit) * 100))
+  return mapUsageWindow(config, usedPercent, MONTHLY_WINDOW_MINUTES)
+}
+
+function mapUsageWindow(
+  config: GrokBillingConfig,
+  usedPercent: number,
+  windowMinutes: number
+): RateLimitWindow {
   const periodEnd = config.currentPeriod?.end ?? config.billingPeriodEnd
   const resetsAt = periodEnd ? Date.parse(periodEnd) : null
   return {
     usedPercent,
-    windowMinutes: MONTHLY_WINDOW_MINUTES,
+    windowMinutes,
     resetsAt: resetsAt !== null && Number.isFinite(resetsAt) ? resetsAt : null,
     resetDescription: parseResetDescription(periodEnd)
   }
@@ -327,8 +325,13 @@ export async function fetchGrokRateLimits(
     if (fallback.kind === 'result') {
       return fallback.result
     }
-    if (fallback.window) {
-      return billingUsageResult({ monthly: fallback.window }, config, session)
+    // Weekly 0% from an omitted credits cap (#44412) needs the default view's zero cap and no spend,
+    // so #15740 usage hidden in one view stays unknown.
+    const { onDemandCap, used } = fallback.config
+    const skipZeroWeekly = fallback.window !== null || reportsPositiveSpend(fallback.config)
+    const zeroWeekly = skipZeroWeekly ? null : mapWeeklyCredits({ onDemandCap, used, ...config })
+    if (fallback.window || zeroWeekly) {
+      return billingUsageResult({ monthly: fallback.window, weekly: zeroWeekly }, config, session)
     }
     // Reported spend without a computable percent is unknown usage, not zero or quota-less.
     return reportsAnyUsageScalar(config) || reportsAnyUsageScalar(fallback.config)

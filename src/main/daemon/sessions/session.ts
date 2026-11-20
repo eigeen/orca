@@ -76,7 +76,6 @@ export class Session extends SessionProcessInspection {
     try {
       this.subprocess.onData((data) => {
         if (!this._disposed) {
-          this.launchNote.scan(data)
           this.shellReady.ingestSubprocessData(data)
         }
       })
@@ -166,6 +165,7 @@ export class Session extends SessionProcessInspection {
     if (this._state === 'exited' || this._disposed || !isValidPtySize(cols, rows)) {
       return
     }
+    this.repaintNudge.retire()
     this.output.resize(cols, rows)
     this.subprocess.resize(cols, rows)
   }

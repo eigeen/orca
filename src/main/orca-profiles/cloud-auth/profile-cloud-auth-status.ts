@@ -1,0 +1,82 @@
+import type { OrcaProfileAuthStatus } from '../../../shared/orca-profiles/orca-profiles'
+import type { ActiveOrcaProfileState } from '../profile-index-store'
+import { getOrcaCloudAuthConfig, isOrcaCloudDevAuthEnabled } from './profile-cloud-auth-config'
+import { readCloudSession } from '../cloud-session/profile-cloud-session-owner'
+import { sessionBelongsToProfile } from '../cloud-session/profile-cloud-session-identity'
+import { getActiveSelfHostedRelayConfig } from '../../runtime/mobile-cloud-relay/self-hosted-relay-preferences'
+
+export function getOrcaProfileAuthStatusFromProfile(
+  active: ActiveOrcaProfileState,
+  userDataPath: string
+): OrcaProfileAuthStatus {
+  const configState = getOrcaCloudAuthConfig()
+  const devAuthEnabled = isOrcaCloudDevAuthEnabled()
+  const configured = configState.configured || devAuthEnabled
+  const selfHosted = getActiveSelfHostedRelayConfig(userDataPath)
+  const relay =
+    selfHosted === undefined ? {} : { selfHostedRelayOrigin: selfHosted?.relayDirectorUrl ?? null }
+  const cloud = active.profile.cloud
+  if (!cloud) {
+    return {
+      ...relay,
+      activeProfileId: active.profile.id,
+      configured,
+      state: configured ? 'local' : 'unconfigured',
+      persistence: 'none',
+      setupMessage: configured ? undefined : configState.setupMessage
+    }
+  }
+
+  const session = readCloudSession(active.profile.id, userDataPath)
+  if (!configured) {
+    return {
+      ...relay,
+      activeProfileId: active.profile.id,
+      configured: false,
+      state: 'unconfigured',
+      persistence: session.status === 'found' ? session.persistence : 'none',
+      cloud,
+      credentialError:
+        session.status === 'decrypt-failed' || session.status === 'unreadable'
+          ? session.error
+          : undefined,
+      setupMessage: configState.setupMessage
+    }
+  }
+  if (session.status === 'found' && !sessionBelongsToProfile(session.session, cloud)) {
+    return {
+      ...relay,
+      activeProfileId: active.profile.id,
+      configured,
+      state: 'reconnect-required',
+      persistence: 'none',
+      cloud,
+      credentialError: 'The saved sign-in belongs to a different Orca account. Sign in again.'
+    }
+  }
+  if (session.status === 'found') {
+    return {
+      ...relay,
+      activeProfileId: active.profile.id,
+      configured,
+      state: 'connected',
+      persistence: session.persistence,
+      cloud,
+      organizations: session.session.organizations,
+      capabilities: session.session.capabilities
+    }
+  }
+
+  return {
+    ...relay,
+    activeProfileId: active.profile.id,
+    configured,
+    state: 'reconnect-required',
+    persistence: 'none',
+    cloud,
+    credentialError:
+      session.status === 'decrypt-failed' || session.status === 'unreadable'
+        ? session.error
+        : undefined
+  }
+}

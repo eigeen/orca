@@ -1,5 +1,5 @@
 import { open, stat } from 'node:fs/promises'
-import type { RelayAuthContext } from './relay-auth-identity'
+import type { RelayAuthContext } from './authentication/relay-auth-identity'
 
 export type SelfHostedRelayConfig = {
   relayDirectorUrl: string

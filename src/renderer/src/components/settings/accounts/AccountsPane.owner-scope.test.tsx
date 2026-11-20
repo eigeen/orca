@@ -4,15 +4,16 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { afterEach, beforeEach, expect, it, vi, type Mock } from 'vitest'
 import { toast } from 'sonner'
 import { i18n } from '@/i18n/i18n'
-import { getDefaultSettings } from '../../../../../shared/constants'
+import { getDefaultSettings } from '../../../../../shared/orca-profiles/constants'
 import type {
   ClaudeManagedAccountSummary,
   ClaudeRateLimitAccountsState
-} from '../../../../../shared/managed-account-types'
-import type { RuntimeClientTarget } from '../../../../../shared/runtime-client-target'
+} from '../../../../../shared/agent-accounts/managed-account-types'
+import type { RuntimeClientTarget } from '../../../../../shared/remote-runtime/host-catalog/runtime-client-target'
 import { AccountsPane } from './AccountsPane'
+import { TooltipProvider } from '../../ui/tooltip'
 import type { SettingsHostScope } from '../host-scope/settings-host-scope'
-import type { SettingsNavigationTarget } from '@/lib/settings-navigation-types'
+import type { SettingsNavigationTarget } from '@/components/settings/navigation/settings-navigation-types'
 import type * as RuntimeRpcCalls from '@/runtime/rpc/calls/runtime-rpc-call'
 
 // Why: focus deliberately points at another server; the pane must follow hostScope only.
@@ -25,12 +26,14 @@ const scopeFor = (environmentId: string | null): SettingsHostScope => ({
   available: true
 })
 const renderPane = (scope: SettingsHostScope): React.JSX.Element => (
-  <AccountsPane
-    settings={focusedElsewhere}
-    updateSettings={vi.fn()}
-    updateSettingsOrThrow={vi.fn()}
-    hostScope={scope}
-  />
+  <TooltipProvider>
+    <AccountsPane
+      settings={focusedElsewhere}
+      updateSettings={vi.fn()}
+      updateSettingsOrThrow={vi.fn()}
+      hostScope={scope}
+    />
+  </TooltipProvider>
 )
 
 const fake = vi.hoisted(() => {
@@ -50,7 +53,7 @@ const fake = vi.hoisted(() => {
         params?: unknown,
         options?: unknown
       ) => Promise<{
-        settings: { directQuotaQueriesEnabled?: boolean }
+        settings: { directQuotaQueriesEnabled?: boolean; claudeOAuthUsageEnabled?: boolean }
       }>
     >
   } = {
@@ -205,7 +208,7 @@ afterEach(() => {
 })
 
 it('toggles direct quota queries on the selected host', async () => {
-  fake.query = 'Query provider quotas'
+  fake.query = 'Query other provider quotas'
   fake.usageSettingsRpc.mockImplementation(async (target: RuntimeClientTarget, method: string) => ({
     settings: {
       directQuotaQueriesEnabled:
@@ -215,7 +218,7 @@ it('toggles direct quota queries on the selected host', async () => {
     }
   }))
   const view = render(renderPane(scopeFor('server-a')))
-  const toggle = await screen.findByRole('switch', { name: 'Query provider quotas' })
+  const toggle = await screen.findByRole('switch', { name: 'Query other provider quotas' })
   expect(toggle).not.toBeChecked()
 
   await act(async () => {
@@ -230,7 +233,36 @@ it('toggles direct quota queries on the selected host', async () => {
   )
 
   await act(async () => view.rerender(renderPane(scopeFor('server-b'))))
-  expect(await screen.findByRole('switch', { name: 'Query provider quotas' })).not.toBeChecked()
+  expect(
+    await screen.findByRole('switch', { name: 'Query other provider quotas' })
+  ).not.toBeChecked()
+})
+
+it('updates Claude polling only on the selected host and hides it on older hosts', async () => {
+  fake.query = 'Claude usage polling'
+  fake.usageSettingsRpc.mockImplementation(async (target: RuntimeClientTarget, method: string) => ({
+    settings:
+      target.kind === 'environment' && target.environmentId === 'server-a'
+        ? { claudeOAuthUsageEnabled: method === 'settings.update' }
+        : {}
+  }))
+  const view = render(renderPane(scopeFor('server-a')))
+  const toggle = await screen.findByRole('switch', { name: 'Claude usage polling' })
+  expect(toggle).not.toBeChecked()
+
+  await act(async () => {
+    fireEvent.click(toggle)
+  })
+  expect(toggle).toBeChecked()
+  expect(fake.usageSettingsRpc).toHaveBeenCalledWith(
+    { kind: 'environment', environmentId: 'server-a' },
+    'settings.update',
+    { claudeOAuthUsageEnabled: true },
+    expect.anything()
+  )
+
+  await act(async () => view.rerender(renderPane(scopeFor('server-b'))))
+  expect(screen.queryByRole('switch', { name: 'Claude usage polling' })).toBeNull()
 })
 
 it("drops a server's late account result after the page moves to another server", async () => {

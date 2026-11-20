@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAppStore } from '@/store'
-import type { OrcaProfileAuthStatus } from '../../../../shared/orca-profiles'
+import type { OrcaProfileAuthStatus } from '../../../../shared/orca-profiles/orca-profiles'
 import {
   resolveMobilePairingConnectionMode,
   type MobilePairingConnectionMode

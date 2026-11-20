@@ -8,6 +8,15 @@ import {
   saveSelfHostedRelaySettings
 } from './self-hosted-relay-preferences'
 
+vi.mock('./self-hosted-relay-preference-writer', async () => {
+  const { writeSecureFile } = await import('../../../shared/secure-storage/secure-file')
+  return {
+    writeSelfHostedRelayPreference: async (path: string, contents: string) => {
+      writeSecureFile(path, contents)
+    }
+  }
+})
+
 let directory: string
 
 beforeEach(() => {

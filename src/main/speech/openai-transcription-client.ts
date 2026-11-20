@@ -1,12 +1,12 @@
 import { getMainHttpClient } from '../network/http-client'
 import { resampleToRate } from './stt-audio-resample'
+import { requireDirectProviderRequests } from '../network/direct-provider-requests'
 import type { CloudTranscriptionTarget } from './cloud-transcription-target'
 import {
   CLOUD_TRANSCRIPTION_SAMPLE_RATE,
   MAX_CLOUD_TRANSCRIPTION_SECONDS,
   cloudTranscriptionTimeoutMs
-} from '../../shared/dictation-finish-deadlines'
-import { requireDirectProviderRequests } from '../network/direct-provider-requests'
+} from '../../shared/speech/dictation/dictation-finish-deadlines'
 
 const MAX_CLOUD_AUDIO_SAMPLES = MAX_CLOUD_TRANSCRIPTION_SECONDS * CLOUD_TRANSCRIPTION_SAMPLE_RATE
 
