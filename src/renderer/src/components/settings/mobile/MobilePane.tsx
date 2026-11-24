@@ -30,7 +30,9 @@ import {
 } from '../../mobile/use-mobile-pairing-connection-mode'
 import { useMobilePairingAddressPreference } from '../../mobile/use-mobile-pairing-address-preference'
 import { usePairingOfferExpiry } from '../../mobile/use-pairing-offer-expiry'
+import { useMobileRelayMintRecovery } from '../../mobile/use-mobile-relay-status'
 import { MOBILE_SETTING_ANCHORS, shouldOpenMobilePairingAddress } from './mobile-pane-search'
+import { formatRelayMintDiagnostics } from '../../mobile/relay-mint-diagnostics'
 import { SelfHostedRelaySettingsSection } from './SelfHostedRelaySettingsSection'
 
 export function MobilePane(): React.JSX.Element {
@@ -288,17 +290,7 @@ export function MobilePane(): React.JSX.Element {
     }
     try {
       await window.api.ui.writeClipboardText(
-        JSON.stringify(
-          {
-            kind: 'mobile_pairing_relay_failure',
-            preferredConnectionMode: connectionMode,
-            failure: relayMintFailure,
-            selectedAddress: selectedAddress ?? null,
-            at: new Date().toISOString()
-          },
-          null,
-          2
-        )
+        formatRelayMintDiagnostics(connectionMode, relayMintFailure, selectedAddress)
       )
       if (mountedRef.current) {
         toast.success(
@@ -336,6 +328,12 @@ export function MobilePane(): React.JSX.Element {
       void loadDevices()
     }
   }, [devicesLoaded, loadDevices])
+
+  useMobileRelayMintRecovery({
+    failure: connectionMode === 'automatic' ? relayMintFailure : null,
+    busy: loading,
+    onRecover: () => void generateQR({ rotate: true })
+  })
 
   // Refresh ahead of expiry; the old code stays valid for a phone mid-scan.
   usePairingOfferExpiry(pairingUrl != null ? qrExpiresAt : null, () => void generateQR())

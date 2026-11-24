@@ -22,7 +22,7 @@ export async function saveVerifiedOpenAiSpeechApiKey(apiKey: string): Promise<vo
   if (trimmed) {
     await rejectUnauthorizedKey(OPENAI_TRANSCRIPTION_URL, trimmed, 'OpenAI')
   }
-  saveOpenAiSpeechApiKey(apiKey)
+  await saveOpenAiSpeechApiKey(apiKey)
 }
 
 /** Same check against the provider's own endpoint, which also catches a wrong base URL. */
@@ -30,10 +30,10 @@ export async function saveVerifiedOpenAiCompatibleSpeechProvider(
   input: OpenAiCompatibleSpeechProvider
 ): Promise<void> {
   requireDirectProviderRequests()
-  const provider = resolveOpenAiCompatibleSpeechProviderInput(input)
+  const provider = await resolveOpenAiCompatibleSpeechProviderInput(input)
   const url = openAiCompatibleTranscriptionUrl(provider.baseUrl)
   await rejectUnauthorizedKey(url, provider.apiKey, new URL(url).host)
-  saveOpenAiCompatibleSpeechProvider(provider)
+  await saveOpenAiCompatibleSpeechProvider(provider)
 }
 
 async function rejectUnauthorizedKey(url: string, apiKey: string, label: string): Promise<void> {

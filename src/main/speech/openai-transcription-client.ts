@@ -106,7 +106,7 @@ export class OpenAiTranscriptionSession {
   private readonly abortController = new AbortController()
 
   constructor(
-    private readonly readTarget: () => CloudTranscriptionTarget,
+    private readonly readTarget: () => CloudTranscriptionTarget | Promise<CloudTranscriptionTarget>,
     private readonly language?: string
   ) {}
 
@@ -134,7 +134,7 @@ export class OpenAiTranscriptionSession {
       return ''
     }
 
-    const target = this.readTarget()
+    const target = await this.readTarget()
     const chunks = this.chunks
     this.chunks = []
     const wav = encodePcm16Wav(chunks, CLOUD_TRANSCRIPTION_SAMPLE_RATE)

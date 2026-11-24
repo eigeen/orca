@@ -69,7 +69,7 @@ export abstract class RateLimitServiceFetchControl extends RateLimitServiceState
   }
 
   protected clearQueuedFetches(): void {
-    this.fullFetchQueued = false
+    this.fullFetchQueued = null
     this.codexOnlyFetchQueued = false
     this.claudeOnlyFetchQueued = false
     this.grokOnlyFetchQueued = false

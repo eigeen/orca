@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useAppStore } from '@/store'
+import { useOrcaTeamFeatureBlocked } from '@/lib/orca-team-policy'
+import { ORCA_CLOUD_TEAM_POLICY_FLAGS } from '../../../../shared/orca-profiles/orca-cloud-team-policy'
 import type { OrcaProfileAuthStatus } from '../../../../shared/orca-profiles/orca-profiles'
 import {
   resolveMobilePairingConnectionMode,
@@ -22,6 +24,7 @@ export function useMobilePairingConnectionMode(): [
 ] {
   const savedConnectionMode = useAppStore((s) => s.settings?.mobilePairingConnectionMode)
   const signedIn = useAppStore(selectMobileRelayAuthorized)
+  const relayBlocked = useOrcaTeamFeatureBlocked(ORCA_CLOUD_TEAM_POLICY_FLAGS.mobileRelay)
   const [connectionMode, setConnectionMode] = useState<MobilePairingConnectionMode>(() =>
     resolveMobilePairingConnectionMode(savedConnectionMode, { signedIn })
   )
@@ -33,5 +36,5 @@ export function useMobilePairingConnectionMode(): [
     setResolvedFrom({ savedConnectionMode, signedIn })
     setConnectionMode(resolveMobilePairingConnectionMode(savedConnectionMode, { signedIn }))
   }
-  return [connectionMode, setConnectionMode]
+  return [relayBlocked ? 'local-only' : connectionMode, setConnectionMode]
 }

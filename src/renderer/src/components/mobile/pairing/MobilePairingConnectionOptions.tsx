@@ -1,18 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
 import { Badge } from '../../ui/badge'
 import { translate } from '../../../i18n/i18n'
 import { useTranslate, type Translate } from '@/i18n/use-translate'
 import { useAppStore } from '../../../store/index'
 import { useOrcaProfileAuthStatusRefresh } from '@/components/orca-profiles/use-orca-profile-auth-status-refresh'
 import { cn } from '@/lib/class-names'
-import type {
-  MobileRelayStatus,
-  MobileRelayStatusDetail
-} from '../../../../../shared/remote-runtime/relay/mobile-relay-status'
+import { useOrcaTeamFeatureBlocked } from '@/lib/orca-team-policy'
+import { ORCA_CLOUD_TEAM_POLICY_FLAGS } from '../../../../../shared/orca-profiles/orca-cloud-team-policy'
+import type { MobileRelayStatus } from '../../../../../shared/remote-runtime/relay/mobile-relay-status'
 import type { MobilePairingConnectionMode } from '../../../../../shared/remote-runtime/pairing/mobile-pairing-connection-mode'
 import { MobilePairingPathOption } from './MobilePairingPathOption'
 import { MobileRelaySignInPanel } from './MobileRelaySignInPanel'
 import { relayClockSkewMessage } from '../relay-clock-skew-message'
+import { useMobileRelayStatus } from '../use-mobile-relay-status'
 import { selectMobileRelayAuthorized } from '../use-mobile-pairing-connection-mode'
 
 function relayStatusLabel(status: MobileRelayStatus, t: Translate = translate): string {
@@ -56,7 +56,8 @@ export function MobilePairingConnectionOptions({
 }): React.JSX.Element {
   const t = useTranslate()
   const authStatus = useAppStore((state) => state.orcaProfileAuthStatus)
-  const [relayStatus, setRelayStatus] = useState<MobileRelayStatusDetail>({ status: 'offline' })
+  const relayBlocked = useOrcaTeamFeatureBlocked(ORCA_CLOUD_TEAM_POLICY_FLAGS.mobileRelay)
+  const relayStatus = useMobileRelayStatus()
   const signedIn = useAppStore(selectMobileRelayAuthorized)
   const selfHostedOrigin = authStatus?.selfHostedRelayOrigin
   const selfHosted = selfHostedOrigin !== undefined
@@ -65,7 +66,7 @@ export function MobilePairingConnectionOptions({
   const configured = selfHosted ? selfHostedOrigin !== null : authStatus?.configured !== false
   const needsSignIn = value === 'automatic' && !selfHosted && !signedIn && configured
   // Availability is a property of the build, not of the current selection.
-  const relayUnavailable = !signedIn && !configured
+  const relayUnavailable = relayBlocked || (!signedIn && !configured)
   const relayDisabled = relayMintRetrying || relayUnavailable
   const optionRefs = useRef<Record<MobilePairingConnectionMode, HTMLDivElement | null>>({
     automatic: null,
@@ -92,34 +93,25 @@ export function MobilePairingConnectionOptions({
   }
 
   const relayCell = relayStatus.cellUrl ? relayCellLabel(relayStatus.cellUrl) : null
+  const relayDescription = relayBlocked
+    ? t('settings.mobile.teamDisabledRelay', 'Orca Relay is turned off by your team. Use LAN.')
+    : selfHosted
+      ? (selfHostedOrigin ??
+        t(
+          'auto.components.settings.MobilePairingConnectionOptions.selfHostedInvalid',
+          'Check the Relay URL and token file configuration.'
+        ))
+      : relayUnavailable
+        ? t(
+            'auto.components.settings.MobilePairingConnectionOptions.relayUnavailable',
+            'Orca Relay isn’t available in this build. Use LAN.'
+          )
+        : t(
+            'auto.components.settings.MobilePairingConnectionOptions.anywhereDescription',
+            'Phone can be on cellular or any Wi‑Fi. Sign-in required for Relay only.'
+          )
 
   useOrcaProfileAuthStatusRefresh()
-
-  useEffect(() => {
-    let receivedEvent = false
-    let active = true
-    const apply = (detail: MobileRelayStatusDetail): void => {
-      setRelayStatus(detail)
-    }
-    const unsubscribe = window.api.mobile.onRelayStatusChanged((detail) => {
-      receivedEvent = true
-      if (active) {
-        apply(detail)
-      }
-    })
-    void window.api.mobile
-      .getRelayStatus()
-      .then((detail) => {
-        if (active && !receivedEvent) {
-          apply(detail)
-        }
-      })
-      .catch(() => {})
-    return () => {
-      active = false
-      unsubscribe()
-    }
-  }, [])
 
   return (
     <div className={cn('space-y-2', compact && 'space-y-1.5')}>
@@ -153,23 +145,7 @@ export function MobilePairingConnectionOptions({
                   'Orca Relay'
                 )
           }
-          description={
-            selfHosted
-              ? (selfHostedOrigin ??
-                t(
-                  'auto.components.settings.MobilePairingConnectionOptions.selfHostedInvalid',
-                  'Check the Relay URL and token file configuration.'
-                ))
-              : relayUnavailable
-                ? t(
-                    'auto.components.settings.MobilePairingConnectionOptions.relayUnavailable',
-                    'Orca Relay isn’t available in this build. Use LAN.'
-                  )
-                : t(
-                    'auto.components.settings.MobilePairingConnectionOptions.anywhereDescription',
-                    'Phone can be on cellular or any Wi‑Fi. Sign-in required for Relay only.'
-                  )
-          }
+          description={relayDescription}
           trailing={
             relayUnavailable ? (
               <Badge variant="outline" className="text-[11px]">

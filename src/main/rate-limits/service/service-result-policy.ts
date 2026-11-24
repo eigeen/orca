@@ -2,6 +2,7 @@ import type {
   RateLimitWindow,
   ProviderRateLimits
 } from '../../../shared/agent-usage/rate-limits/rate-limit-types'
+import { isCodexUsageSignInRequired } from '../../../shared/agent-accounts/codex/codex-auth-errors'
 import { RateLimitServiceFetchControl } from './service-fetch-control'
 import {
   LONG_STALE_THRESHOLD_MS,
@@ -52,8 +53,12 @@ export abstract class RateLimitServiceResultPolicy extends RateLimitServiceFetch
       }
     }
 
-    // Disabled or unavailable meters clear stale usage.
-    if (fresh.status === 'idle' || fresh.status === 'unavailable') {
+    // Disabled and unavailable meters and a rejected Codex login clear stale usage.
+    if (
+      fresh.status === 'idle' ||
+      fresh.status === 'unavailable' ||
+      isCodexUsageSignInRequired(fresh)
+    ) {
       return fresh
     }
 
