@@ -7,6 +7,7 @@ export const PairingCreateOfferParamsSchema = z
   .object({
     scope: z.enum(['mobile', 'runtime']),
     address: z.string().min(1).max(512).optional(),
+    reach: z.literal('this-computer').optional(),
     relay: z.boolean().optional(),
     grantDesktopControl: z.boolean().optional(),
     rotate: z.boolean().optional(),
@@ -16,6 +17,9 @@ export const PairingCreateOfferParamsSchema = z
   .strict()
   .refine((params) => params.scope === 'mobile' || params.relay !== true, {
     message: 'relay applies only to mobile pairing'
+  })
+  .refine((params) => params.scope === 'runtime' || params.reach === undefined, {
+    message: 'loopback pairing applies only to a runtime client'
   })
   .refine((params) => params.scope === 'runtime' || params.grantDesktopControl !== true, {
     message: 'desktop control can be granted only to a runtime client'
