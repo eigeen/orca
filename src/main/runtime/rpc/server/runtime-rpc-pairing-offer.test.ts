@@ -8,7 +8,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { OrcaRuntimeService } from '../../orca-runtime'
 import { OrcaRuntimeRpcServer } from './runtime-rpc'
 import { parsePairingCode } from '../../../../shared/remote-runtime/pairing/pairing'
-import { createOwnerPairingOffer } from './pairing/pairing-offer-requests'
 import { DEVICE_REGISTRY_FILENAME } from './pairing/mobile-pairing-files'
 import '../../../../shared/remote-runtime/host-store/runtime-e2ee-keypair-file'
 import '../methods/host-management/status'
@@ -50,53 +49,6 @@ const { getWorktreeListingMocks } = vi.hoisted(() => {
 })
 
 describe('OrcaRuntimeRpcServer', () => {
-  it('offers an SSH tunnel port without changing a loopback listener or reusing a network link', async () => {
-    const userDataPath = mkdtempSync(join(tmpdir(), 'orca-runtime-rpc-'))
-    const server = new OrcaRuntimeRpcServer({
-      methods: [],
-      runtime: new OrcaRuntimeService(),
-      userDataPath,
-      enableWebSocket: true,
-      wsPort: 0,
-      pinnedBindHost: '127.0.0.1'
-    })
-
-    await server.start()
-    try {
-      const listenEndpoint = server.getWebSocketEndpoint()
-      const network = server.createPairingOffer({
-        address: '192.168.1.249',
-        scope: 'runtime',
-        reach: 'network'
-      })
-      if (!network.available) {
-        throw new Error('Could not seed the pending network link')
-      }
-
-      const offer = await createOwnerPairingOffer(server, {
-        scope: 'runtime',
-        reach: 'this-computer',
-        address: 'ws://127.0.0.1:16800'
-      })
-      if (!offer.available) {
-        throw new Error(offer.reason)
-      }
-      expect(parsePairingCode(offer.pairingUrl)?.endpoint).toBe('ws://127.0.0.1:16800')
-      expect(offer.deviceId).not.toBe(network.deviceId)
-      expect(server.getWebSocketEndpoint()).toBe(listenEndpoint)
-
-      const invalid = await createOwnerPairingOffer(server, {
-        scope: 'runtime',
-        reach: 'this-computer',
-        address: 'ws://192.168.1.249:16800'
-      })
-      expect(invalid).toMatchObject({ available: false, reason: 'invalid_advertised_endpoint' })
-      expect(server.getWebSocketEndpoint()).toBe(listenEndpoint)
-    } finally {
-      await server.stop()
-    }
-  })
-
   it('gives a copy started with another ORCA_INSTANCE_ID its own key and drops copied tokens', async () => {
     const pairingFrom = async (userDataPath: string, instanceId: string) => {
       vi.stubEnv('ORCA_INSTANCE_ID', instanceId)

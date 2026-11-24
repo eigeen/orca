@@ -82,15 +82,29 @@ export class DeviceRegistry extends DeviceRegistrySightings {
     if (live !== this.devices) {
       this.saveOrLog({}, 'prune expired pairing offers', this.devices, live)
     }
-    // Changing reach must not change the permissions of a link already handed out.
+    // Reuse only identical grants so re-advertisement cannot expand permissions.
     const existing = this.getPendingDevice(
       scope,
       options.offerTtlMs,
       grants,
-      options.createdByDeviceId,
-      pairingReach
+      options.createdByDeviceId
     )
-    return existing ?? this.addDevice(name, scope, pairingReach, grants, options)
+    if (existing) {
+      // Widen advertised reach, never narrow it and break an off-host link already handed out.
+      const widen = pairingReach === 'network' && existing.pairingReach === 'this-computer'
+      // Removed on disk meanwhile: mint a fresh offer rather than hand out a revoked one.
+      const offered = widen ? this.setPairingReach(existing, 'network') : existing
+      return offered ?? this.addDevice(name, scope, pairingReach, grants, options)
+    }
+    return this.addDevice(name, scope, pairingReach, grants, options)
+  }
+
+  private setPairingReach(
+    existing: TokenDeviceEntry,
+    pairingReach: RuntimePairingReach
+  ): TokenDeviceEntry | null {
+    const updated: TokenDeviceEntry = { ...existing, pairingReach }
+    return this.replaceRow(existing.deviceId, () => updated) ? updated : null
   }
 
   /** Explicit QR regeneration revokes leaked unused offers; ordinary re-advertisement reuses them. */
@@ -146,13 +160,10 @@ export class DeviceRegistry extends DeviceRegistrySightings {
     scope: DeviceScope = 'mobile',
     offerTtlMs?: number,
     grants: readonly RuntimeDeviceGrant[] = [],
-    createdByDeviceId?: string,
-    pairingReach?: RuntimePairingReach
+    createdByDeviceId?: string
   ): TokenDeviceEntry | null {
     this.adoptExternalEdits({ fresh: true })
-    const offers = this.listPendingDevices(scope).filter(
-      (offer) => pairingReach === undefined || (offer.pairingReach ?? 'network') === pairingReach
-    )
+    const offers = this.listPendingDevices(scope)
     return reusablePairingOffer(
       offers,
       validGrants(grants, scope) ?? [],

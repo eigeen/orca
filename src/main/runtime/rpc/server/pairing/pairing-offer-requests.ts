@@ -40,7 +40,11 @@ export type PairingOfferServer = Pick<
 const NO_PAIRING_ADDRESS_GUIDANCE =
   'No reachable network address is available for pairing. Connect to Wi‑Fi or Tailscale, or pick an address manually.'
 
-function isLoopbackPairingAddress(address: string): boolean {
+// Only explicit this-computer intent plus a loopback address avoids widening; custom tunnel endpoints still need remote reach.
+function servesThisComputerOnly(reach: RuntimePairingReach | undefined, address: string): boolean {
+  if (reach !== 'this-computer') {
+    return false
+  }
   const hostname = resolveAdvertisedPairingHostname(address)
   return hostname !== null && classifyRemotePairingHostname(hostname) === 'loopback'
 }
@@ -102,21 +106,13 @@ export async function requestRuntimePairingOffer(
   },
   lookup: DefaultRouteInterfaceLookup = getWindowsDefaultRouteInterfaceNames
 ): Promise<ReturnType<PairingOfferServer['createPairingOffer']>> {
-  const reach = args.reach ?? 'network'
-  const ip =
-    reach === 'this-computer'
-      ? (args.address ?? '127.0.0.1')
-      : await pairingAddress(server, args.address, lookup)
+  const ip = await pairingAddress(server, args.address, lookup)
   if (!ip) {
     return pairingUnavailable('invalid_advertised_endpoint', NO_PAIRING_ADDRESS_GUIDANCE)
   }
-  if (reach === 'this-computer' && !isLoopbackPairingAddress(ip)) {
-    return pairingUnavailable(
-      'invalid_advertised_endpoint',
-      'Use a loopback address such as 127.0.0.1 for this pairing link.'
-    )
-  }
-  if (reach === 'network') {
+  // Widen before advertising remote reach; this-computer intent must not trigger the irreversible widening (STA-2370).
+  const thisComputerOnly = servesThisComputerOnly(args.reach, ip)
+  if (!thisComputerOnly) {
     try {
       await server.ensureNetworkExposure()
     } catch (error) {
@@ -134,7 +130,7 @@ export async function requestRuntimePairingOffer(
     name: `Runtime ${new Date().toLocaleDateString()}`,
     scope: 'runtime',
     // Persist local reach so local authentication cannot expose the next launch to the LAN.
-    reach,
+    reach: thisComputerOnly ? 'this-computer' : 'network',
     grants: args.grants,
     offerTtlMs: args.offerTtlMs,
     createdByDeviceId: args.createdByDeviceId
@@ -177,7 +173,6 @@ export async function createOwnerPairingOffer(
     server,
     {
       address: params.address,
-      reach: params.reach,
       rotate: params.rotate,
       grants: params.grantDesktopControl ? ['desktop-control'] : [],
       createdByDeviceId

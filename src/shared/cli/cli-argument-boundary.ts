@@ -44,7 +44,6 @@ export const CLI_BOOLEAN_FLAGS = new Set([
   'json',
   'latest-json',
   'local',
-  'loopback',
   'messages',
   'me',
   'mobile',

@@ -54,10 +54,6 @@ export function formatPairingOffer(offer: PairingCreateOfferResult): string {
 export const PAIR_HANDLERS: Record<string, CommandHandler> = {
   pair: async ({ client, flags, json }) => {
     const mobile = flags.get('mobile') === true
-    const loopback = flags.get('loopback') === true
-    if (loopback && mobile) {
-      throw new RuntimeClientError('invalid_argument', '--loopback applies only to an access link')
-    }
     if (flags.get('relay') === true && !mobile) {
       throw new RuntimeClientError('invalid_argument', '--relay applies only with --mobile')
     }
@@ -73,7 +69,6 @@ export const PAIR_HANDLERS: Record<string, CommandHandler> = {
       relay: flags.get('relay') === true,
       grantDesktopControl: flags.get('grant-desktop-control') === true,
       rotate: flags.get('rotate') === true,
-      ...(loopback ? { reach: 'this-computer' } : {}),
       ...(await callerTerminal(client))
     }
     const response = await client.call<PairingCreateOfferResult>(
